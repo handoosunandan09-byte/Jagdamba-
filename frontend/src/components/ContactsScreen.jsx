@@ -57,7 +57,7 @@ const ContactsScreen = ({ onBack }) => {
     <div className="flex flex-col h-full">
       <ScreenHeader title="Trusted contacts" subtitle="Who we alert when you need help" onBack={onBack} />
       <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-3 float-up">
-        <div className="bg-[#DCEEE9] rounded-2xl p-4 mb-4">
+        <div className="bg-[#E4EEE2] rounded-2xl p-4 mb-4">
           <p className="text-[13px] text-[#1C6B5D] leading-snug">
             When you press <span className="font-bold">SOS</span>, Saathi shares your live location with everyone in this circle.
           </p>
@@ -69,14 +69,14 @@ const ContactsScreen = ({ onBack }) => {
           <div className="space-y-3">
             {contacts.map((c) => (
               <div key={c.id} className="bg-white rounded-2xl border border-[#EFE7DB] p-4 flex items-center gap-3">
-                <span className="h-11 w-11 shrink-0 rounded-full bg-[#DCEEE9] text-[#1C8C78] flex items-center justify-center font-bold">
+                <span className="h-11 w-11 shrink-0 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center font-bold">
                   {c.name.trim().charAt(0).toUpperCase()}
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14.5px] font-bold text-[#1B2A28] truncate">{c.name}</p>
                   <div className="flex items-center gap-1.5 text-[12px] text-[#6B7A77] mt-0.5">
                     <Phone className="h-3 w-3" /> {c.phone}
-                    {c.relation && <span className="ml-1 text-[#1C8C78] font-medium">· {c.relation}</span>}
+                    {c.relation && <span className="ml-1 text-[#2F6B4A] font-medium">· {c.relation}</span>}
                   </div>
                 </div>
                 <button onClick={() => remove(c.id, c.name)} className="h-9 w-9 rounded-full bg-[#FBEAE3] text-[#E5603C] flex items-center justify-center hover:bg-[#f6dccf] transition-colors" aria-label="Remove">
@@ -91,7 +91,7 @@ const ContactsScreen = ({ onBack }) => {
         )}
 
         {!adding ? (
-          <button onClick={() => setAdding(true)} className="w-full mt-4 rounded-2xl border-2 border-dashed border-[#1C8C78]/40 text-[#1C8C78] py-4 flex items-center justify-center gap-2 font-semibold hover:bg-[#DCEEE9]/50 transition-colors">
+          <button onClick={() => setAdding(true)} className="w-full mt-4 rounded-2xl border-2 border-dashed border-[#2F6B4A]/40 text-[#2F6B4A] py-4 flex items-center justify-center gap-2 font-semibold hover:bg-[#E4EEE2]/50 transition-colors">
             <UserPlus className="h-5 w-5" /> Add a trusted contact
           </button>
         ) : (

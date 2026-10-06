@@ -35,7 +35,7 @@ const ReportScreen = ({ onBack }) => {
       <div className="flex flex-col h-full">
         <ScreenHeader title="Report submitted" onBack={onBack} />
         <div className="flex-1 flex flex-col items-center justify-center px-8 text-center float-up">
-          <span className="h-20 w-20 rounded-full bg-[#DCEEE9] text-[#1C8C78] flex items-center justify-center mb-5 pop-in">
+          <span className="h-20 w-20 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center mb-5 pop-in">
             <CheckCircle2 className="h-10 w-10" />
           </span>
           <h3 className="text-[20px] font-extrabold text-[#1B2A28]">Thank you, Priya!</h3>
@@ -84,7 +84,7 @@ const ReportScreen = ({ onBack }) => {
           />
         </div>
 
-        <button className="w-full border-2 border-dashed border-[#D8E0DD] rounded-2xl py-5 flex flex-col items-center text-[#6B7A77] hover:border-[#1C8C78]/50 hover:text-[#1C8C78] transition-colors">
+        <button className="w-full border-2 border-dashed border-[#D8E0DD] rounded-2xl py-5 flex flex-col items-center text-[#6B7A77] hover:border-[#2F6B4A]/50 hover:text-[#2F6B4A] transition-colors">
           <Camera className="h-6 w-6 mb-1" />
           <span className="text-[13px] font-medium">Add a photo (optional)</span>
         </button>

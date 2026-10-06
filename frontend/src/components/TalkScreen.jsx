@@ -91,7 +91,7 @@ const TalkScreen = ({ onBack, emergency }) => {
             <button
               key={s}
               onClick={() => setInput(s)}
-              className="shrink-0 text-[12px] font-medium text-[#1C8C78] bg-[#DCEEE9] rounded-full px-3 py-1.5 hover:bg-[#cfe8e2] transition-colors"
+              className="shrink-0 text-[12px] font-medium text-[#2F6B4A] bg-[#E4EEE2] rounded-full px-3 py-1.5 hover:bg-[#d7e6d4] transition-colors"
             >
               {s}
             </button>
@@ -113,7 +113,7 @@ const TalkScreen = ({ onBack, emergency }) => {
           <button
             onClick={onMic}
             className={`h-9 w-9 rounded-full flex items-center justify-center transition-colors ${
-              listening ? "bg-[#E5603C] text-white animate-pulse" : "bg-[#DCEEE9] text-[#1C8C78] hover:bg-[#cfe8e2]"
+              listening ? "bg-[#E5603C] text-white animate-pulse" : "bg-[#E4EEE2] text-[#2F6B4A] hover:bg-[#d7e6d4]"
             }`}
             aria-label="Voice input"
           >

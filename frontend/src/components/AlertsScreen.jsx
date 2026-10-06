@@ -5,7 +5,7 @@ import { AlertTriangle, MapPin } from "lucide-react";
 const levelStyle = {
   high: { dot: "bg-[#E5603C]", chip: "bg-[#FBEAE3] text-[#C1452A]", label: "High" },
   medium: { dot: "bg-[#E0A13C]", chip: "bg-[#FBF1DE] text-[#B07A1E]", label: "Medium" },
-  low: { dot: "bg-[#1C8C78]", chip: "bg-[#DCEEE9] text-[#1C8C78]", label: "Info" },
+  low: { dot: "bg-[#2F6B4A]", chip: "bg-[#E4EEE2] text-[#2F6B4A]", label: "Info" },
 };
 
 const AlertsScreen = () => {
@@ -29,7 +29,7 @@ const AlertsScreen = () => {
               </div>
               <p className="text-[15px] font-bold text-[#1B2A28] mt-2.5">{a.title}</p>
               <p className="text-[13px] text-[#6B7A77] mt-1 leading-snug">{a.desc}</p>
-              <div className="flex items-center gap-1 mt-2.5 text-[12px] font-medium text-[#1C8C78]">
+              <div className="flex items-center gap-1 mt-2.5 text-[12px] font-medium text-[#2F6B4A]">
                 <MapPin className="h-3.5 w-3.5" /> {a.area}
               </div>
             </div>

@@ -99,12 +99,12 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
             <div className="mt-4 bg-white rounded-2xl border border-[#EFE7DB] divide-y divide-[#F1EADF] text-left">
               {recipients.map((r, i) => (
                 <div key={i} className="flex items-center gap-3 p-3">
-                  <span className="h-9 w-9 rounded-full bg-[#DCEEE9] text-[#1C8C78] flex items-center justify-center font-bold text-[13px]">{r.name.trim().charAt(0).toUpperCase()}</span>
+                  <span className="h-9 w-9 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center font-bold text-[13px]">{r.name.trim().charAt(0).toUpperCase()}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13.5px] font-semibold text-[#1B2A28] truncate">{r.name}</p>
                     <p className="text-[11.5px] text-[#6B7A77]">{r.phone}</p>
                   </div>
-                  <span className="text-[11px] font-bold text-[#1C8C78] bg-[#DCEEE9] rounded-full px-2.5 py-1 flex items-center gap-1"><Check className="h-3 w-3" /> Sent</span>
+                  <span className="text-[11px] font-bold text-[#2F6B4A] bg-[#E4EEE2] rounded-full px-2.5 py-1 flex items-center gap-1"><Check className="h-3 w-3" /> Sent</span>
                 </div>
               ))}
             </div>
@@ -112,10 +112,10 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
             {/* Message preview */}
             <div className="mt-3 text-left">
               <p className="text-[12px] font-semibold text-[#6B7A77] mb-1.5 px-1">Message sent</p>
-              <div className="bg-[#DCEEE9] rounded-2xl rounded-bl-md p-3.5 text-[13px] text-[#14433A] leading-snug">
+              <div className="bg-[#E4EEE2] rounded-2xl rounded-bl-md p-3.5 text-[13px] text-[#14433A] leading-snug">
                 {result?.message}
               </div>
-              <a href={result?.maps_link} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-[13px] font-semibold text-[#1C8C78] bg-white border border-[#EFE7DB] rounded-full px-4 py-2 hover:bg-[#F3ECE1] transition-colors">
+              <a href={result?.maps_link} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-[13px] font-semibold text-[#2F6B4A] bg-white border border-[#EFE7DB] rounded-full px-4 py-2 hover:bg-[#F3ECE1] transition-colors">
                 <MapPin className="h-4 w-4" /> Open shared location <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </div>

@@ -39,11 +39,11 @@ const SafetyModeScreen = ({ onBack, onManageContacts }) => {
       <ScreenHeader title="Safety Mode" subtitle="Timed check-ins with your circle" onBack={onBack} />
       <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-4 float-up">
         <div className="relative flex items-center justify-center my-4" style={{ height: 240 }}>
-          {active && <span className="absolute h-[180px] w-[180px] rounded-full bg-[#1C8C78]/25 pulse-ring" />}
+          {active && <span className="absolute h-[180px] w-[180px] rounded-full bg-[#2F6B4A]/25 pulse-ring" />}
           <div
             className="h-[180px] w-[180px] rounded-full flex flex-col items-center justify-center text-white shadow-[0_18px_40px_-12px_rgba(28,140,120,0.6)]"
             style={{ background: active
-              ? "radial-gradient(circle at 50% 35%, #2BA98F 0%, #1C8C78 60%, #167766 100%)"
+              ? "radial-gradient(circle at 50% 35%, #2BA98F 0%, #2F6B4A 60%, #167766 100%)"
               : "radial-gradient(circle at 50% 35%, #3a4f4a 0%, #27403b 60%, #17302B 100%)" }}
           >
             <ShieldCheck className="h-8 w-8 mb-1" />
@@ -77,13 +77,13 @@ const SafetyModeScreen = ({ onBack, onManageContacts }) => {
 
         <div className="bg-white rounded-2xl border border-[#EFE7DB] p-4 flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <span className="h-9 w-9 rounded-full bg-[#DCEEE9] text-[#1C8C78] flex items-center justify-center"><UserPlus className="h-4.5 w-4.5" /></span>
+            <span className="h-9 w-9 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center"><UserPlus className="h-4.5 w-4.5" /></span>
             <div>
               <p className="text-[14px] font-bold text-[#1B2A28]">Trusted contact</p>
               <p className="text-[12px] text-[#6B7A77]">Mom • +91 99887 76655</p>
             </div>
           </div>
-          <button onClick={onManageContacts} className="text-[12px] font-semibold text-[#1C8C78]">Change</button>
+          <button onClick={onManageContacts} className="text-[12px] font-semibold text-[#2F6B4A]">Change</button>
         </div>
 
         {!active ? (

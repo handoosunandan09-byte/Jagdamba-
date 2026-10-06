@@ -22,20 +22,20 @@ const NearbyScreen = ({ onBack }) => {
             const Icon = p.icon;
             return (
               <div key={p.id} className="bg-white rounded-2xl border border-[#EFE7DB] p-4 flex items-center gap-3">
-                <span className="h-11 w-11 shrink-0 rounded-full bg-[#DCEEE9] text-[#1C8C78] flex items-center justify-center"><Icon className="h-5 w-5" /></span>
+                <span className="h-11 w-11 shrink-0 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center"><Icon className="h-5 w-5" /></span>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14.5px] font-bold text-[#1B2A28] truncate">{p.name}</p>
                   <div className="flex items-center gap-2 mt-0.5 text-[12px] text-[#6B7A77]">
                     <span>{p.type}</span>
                     <span className="h-1 w-1 rounded-full bg-[#CBD4D1]" />
                     <span>{p.distance}</span>
-                    <span className={`font-semibold ${p.open ? "text-[#1C8C78]" : "text-[#C15B3C]"}`}>{p.open ? "Open" : "Closed"}</span>
+                    <span className={`font-semibold ${p.open ? "text-[#2F6B4A]" : "text-[#C15B3C]"}`}>{p.open ? "Open" : "Closed"}</span>
                   </div>
                 </div>
                 <a href={`tel:${p.phone}`} className="h-9 w-9 rounded-full bg-[#E5603C] text-white flex items-center justify-center hover:bg-[#d9542f] transition-colors" aria-label="Call">
                   <Phone className="h-4 w-4" />
                 </a>
-                <button className="h-9 w-9 rounded-full bg-[#DCEEE9] text-[#1C8C78] flex items-center justify-center hover:bg-[#cfe8e2] transition-colors" aria-label="Directions">
+                <button className="h-9 w-9 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center hover:bg-[#d7e6d4] transition-colors" aria-label="Directions">
                   <Navigation className="h-4 w-4" />
                 </button>
               </div>
