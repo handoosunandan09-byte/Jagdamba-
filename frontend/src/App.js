@@ -12,6 +12,7 @@ import AlertsScreen from "./components/AlertsScreen";
 import ProfileScreen from "./components/ProfileScreen";
 import SosScreen from "./components/SosScreen";
 import ContactsScreen from "./components/ContactsScreen";
+import GuardianScreen from "./components/GuardianScreen";
 
 // Tabs that live in the bottom nav
 const TABS = ["home", "nearby", "alerts", "profile"];
@@ -42,6 +43,8 @@ function App() {
         );
       case "contacts":
         return <ContactsScreen onBack={goHome} />;
+      case "guardian":
+        return <GuardianScreen onBack={goHome} />;
       case "talk":
         return <TalkScreen onBack={goHome} emergency={screenProps.emergency} />;
       case "safety":

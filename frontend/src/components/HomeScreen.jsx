@@ -1,6 +1,6 @@
 import React from "react";
 import { quickActions, emergencyContacts } from "../mock";
-import { Phone, Navigation } from "lucide-react";
+import { Phone, Navigation, Radar, ChevronRight } from "lucide-react";
 
 const HomeScreen = ({ onNavigate }) => {
   return (
@@ -61,6 +61,22 @@ const HomeScreen = ({ onNavigate }) => {
           );
         })}
       </div>
+
+      {/* Guardian Mode banner */}
+      <button
+        onClick={() => onNavigate("guardian")}
+        className="w-full mt-5 text-left rounded-2xl border border-[#2F6B4A]/25 bg-[#E4EEE2] p-4 flex items-center gap-3.5 hover:bg-[#dbe9d8] transition-colors"
+      >
+        <span className="relative h-11 w-11 shrink-0 rounded-full bg-[#2F6B4A] text-white flex items-center justify-center">
+          <Radar className="h-5 w-5" />
+          <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-[#E5603C] border-2 border-[#E4EEE2]" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[15px] font-bold text-[#28503B] leading-tight">Guardian Mode</p>
+          <p className="text-[12px] text-[#4B6B59] mt-0.5 leading-snug">Auto-detects a crash or hard fall and alerts your circle — even if you can&apos;t</p>
+        </div>
+        <ChevronRight className="h-5 w-5 text-[#2F6B4A] shrink-0" />
+      </button>
 
       {/* Emergency quick dial */}
       <div className="mt-6">
