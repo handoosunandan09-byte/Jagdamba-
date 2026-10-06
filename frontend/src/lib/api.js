@@ -18,6 +18,21 @@ export const shareSos = async (payload) => {
   return data;
 };
 
+export const getContacts = async () => {
+  const { data } = await axios.get(`${API}/contacts`);
+  return data;
+};
+
+export const addContact = async (payload) => {
+  const { data } = await axios.post(`${API}/contacts`, payload);
+  return data;
+};
+
+export const deleteContact = async (id) => {
+  const { data } = await axios.delete(`${API}/contacts/${id}`);
+  return data;
+};
+
 // Get a stable per-browser session id for Saathi chat
 export const getSessionId = () => {
   let id = localStorage.getItem("saathi_session");

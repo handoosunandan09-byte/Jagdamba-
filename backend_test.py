@@ -283,17 +283,227 @@ def test_reports_endpoint():
         test_results["errors"].append(f"GET /api/reports - Exception: {str(e)}")
         return False
 
-def test_sos_endpoint():
-    """Test POST /api/sos with coordinates and without"""
-    print_test("POST /api/sos - Emergency SOS")
+def test_contacts_endpoint():
+    """Test GET /api/contacts, POST /api/contacts, and DELETE /api/contacts/{id}"""
+    print_test("Contacts Management - GET, POST, DELETE /api/contacts")
     
-    # Test 1: SOS with coordinates
-    print_info("Test 1: Creating SOS with coordinates")
+    # Test 1: GET /api/contacts - should return seeded contacts
+    print_info("Test 1: Getting all contacts (should include seeded Mom and Rahul)")
+    try:
+        response = requests.get(f"{BACKEND_URL}/contacts", timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        print_info(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list):
+                print_pass(f"GET /api/contacts returns list with {len(data)} contacts")
+                
+                # Check for seeded contacts
+                contact_names = [c.get("name") for c in data]
+                has_mom = "Mom" in contact_names
+                has_rahul = "Rahul (Brother)" in contact_names
+                
+                if has_mom and has_rahul:
+                    print_pass("Seeded contacts found: Mom and Rahul (Brother)")
+                    test_results["passed"] += 1
+                else:
+                    print_fail(f"Missing seeded contacts. Found: {contact_names}")
+                    test_results["failed"] += 1
+                    test_results["errors"].append(f"GET /api/contacts - missing seeded contacts. Found: {contact_names}")
+                    return False
+                
+                # Verify each contact has required fields
+                required_fields = ["id", "name", "phone", "created_at"]
+                for contact in data:
+                    missing = [f for f in required_fields if f not in contact]
+                    if missing:
+                        print_fail(f"Contact missing fields: {missing}")
+                        test_results["failed"] += 1
+                        test_results["errors"].append(f"GET /api/contacts - contact missing fields: {missing}")
+                        return False
+                
+                print_pass("All contacts have required fields (id, name, phone, created_at)")
+            else:
+                print_fail("Response is not a list")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/contacts - response is not a list")
+                return False
+        else:
+            print_fail(f"Expected 200, got {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"GET /api/contacts - returned {response.status_code}")
+            return False
+    except Exception as e:
+        print_fail(f"Exception getting contacts: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"GET /api/contacts - Exception: {str(e)}")
+        return False
+    
+    # Test 2: POST /api/contacts - create a new contact
+    print_info("\nTest 2: Creating a new contact")
+    created_contact_id = None
+    try:
+        payload = {
+            "name": "Anita (Friend)",
+            "phone": "+91 90000 11111",
+            "relation": "Friend"
+        }
+        response = requests.post(f"{BACKEND_URL}/contacts", json=payload, timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        print_info(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            required_fields = ["id", "name", "phone", "relation", "created_at"]
+            missing_fields = [f for f in required_fields if f not in data]
+            
+            if not missing_fields:
+                # Verify the data matches what we sent
+                if data["name"] == payload["name"] and data["phone"] == payload["phone"] and data["relation"] == payload["relation"]:
+                    print_pass(f"Contact created successfully with id: {data['id']}")
+                    created_contact_id = data["id"]
+                    test_results["passed"] += 1
+                else:
+                    print_fail("Created contact data doesn't match payload")
+                    test_results["failed"] += 1
+                    test_results["errors"].append("POST /api/contacts - data mismatch")
+                    return False
+            else:
+                print_fail(f"Response missing fields: {missing_fields}")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"POST /api/contacts - missing fields: {missing_fields}")
+                return False
+        else:
+            print_fail(f"Expected 200, got {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/contacts - returned {response.status_code}")
+            return False
+    except Exception as e:
+        print_fail(f"Exception creating contact: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"POST /api/contacts - Exception: {str(e)}")
+        return False
+    
+    # Test 3: GET /api/contacts again to verify the new contact appears
+    print_info("\nTest 3: Verifying new contact appears in GET /api/contacts")
+    try:
+        response = requests.get(f"{BACKEND_URL}/contacts", timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            contact_ids = [c.get("id") for c in data]
+            
+            if created_contact_id in contact_ids:
+                print_pass("New contact found in the list")
+                test_results["passed"] += 1
+            else:
+                print_fail("New contact not found in the list")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/contacts - new contact not in list")
+                return False
+        else:
+            print_fail(f"Expected 200, got {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"GET /api/contacts (verify) - returned {response.status_code}")
+            return False
+    except Exception as e:
+        print_fail(f"Exception verifying contact: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"GET /api/contacts (verify) - Exception: {str(e)}")
+        return False
+    
+    # Test 4: DELETE /api/contacts/{id} - delete the created contact
+    print_info(f"\nTest 4: Deleting contact with id: {created_contact_id}")
+    try:
+        response = requests.delete(f"{BACKEND_URL}/contacts/{created_contact_id}", timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        print_info(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("deleted") == True:
+                print_pass("Contact deleted successfully")
+                test_results["passed"] += 1
+            else:
+                print_fail("Response doesn't confirm deletion")
+                test_results["failed"] += 1
+                test_results["errors"].append("DELETE /api/contacts/{id} - deletion not confirmed")
+                return False
+        else:
+            print_fail(f"Expected 200, got {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"DELETE /api/contacts/{{id}} - returned {response.status_code}")
+            return False
+    except Exception as e:
+        print_fail(f"Exception deleting contact: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"DELETE /api/contacts/{{id}} - Exception: {str(e)}")
+        return False
+    
+    # Test 5: GET /api/contacts to verify the contact is gone
+    print_info("\nTest 5: Verifying deleted contact is gone")
+    try:
+        response = requests.get(f"{BACKEND_URL}/contacts", timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            contact_ids = [c.get("id") for c in data]
+            
+            if created_contact_id not in contact_ids:
+                print_pass("Deleted contact no longer in the list")
+                test_results["passed"] += 1
+            else:
+                print_fail("Deleted contact still in the list")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/contacts - deleted contact still present")
+                return False
+        else:
+            print_fail(f"Expected 200, got {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"GET /api/contacts (verify deletion) - returned {response.status_code}")
+            return False
+    except Exception as e:
+        print_fail(f"Exception verifying deletion: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"GET /api/contacts (verify deletion) - Exception: {str(e)}")
+        return False
+    
+    # Test 6: DELETE with non-existent id - should return 404
+    print_info("\nTest 6: Testing DELETE with non-existent contact id")
+    try:
+        fake_id = "non-existent-id-12345"
+        response = requests.delete(f"{BACKEND_URL}/contacts/{fake_id}", timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        print_info(f"Response: {response.text}")
+        
+        if response.status_code == 404:
+            print_pass("DELETE with non-existent id correctly returns 404")
+            test_results["passed"] += 1
+            return True
+        else:
+            print_fail(f"Expected 404 for non-existent id, got {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"DELETE /api/contacts/{{non-existent}} - returned {response.status_code} instead of 404")
+            return False
+    except Exception as e:
+        print_fail(f"Exception testing non-existent id: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"DELETE /api/contacts/{{non-existent}} - Exception: {str(e)}")
+        return False
+
+def test_sos_endpoint():
+    """Test POST /api/sos with new structure (lat, lng, channel, recipients)"""
+    print_test("POST /api/sos - Emergency SOS with trusted contacts")
+    
+    print_info("Testing SOS with coordinates and channel")
     try:
         payload = {
             "lat": 12.9352,
             "lng": 77.6245,
-            "contact_name": "Mom"
+            "channel": "sms"
         }
         response = requests.post(f"{BACKEND_URL}/sos", json=payload, timeout=10)
         print_info(f"Status Code: {response.status_code}")
@@ -301,34 +511,73 @@ def test_sos_endpoint():
         
         if response.status_code == 200:
             data = response.json()
-            required_fields = ["maps_link", "contact_name", "id", "shared_at"]
+            required_fields = ["id", "maps_link", "message", "channel", "recipients", "shared_at"]
             missing_fields = [f for f in required_fields if f not in data]
             
-            if not missing_fields:
-                # Verify maps_link contains coordinates
-                maps_link = data["maps_link"]
-                if "12.9352" in maps_link and "77.6245" in maps_link and "google.com/maps" in maps_link:
-                    print_pass(f"Maps link contains coordinates: {maps_link}")
-                else:
-                    print_fail(f"Maps link doesn't contain expected coordinates: {maps_link}")
-                    test_results["failed"] += 1
-                    test_results["errors"].append(f"POST /api/sos - maps_link incorrect: {maps_link}")
-                    return False
-                
-                # Verify contact_name
-                if data["contact_name"] == "Mom":
-                    print_pass("Contact name is correct: Mom")
-                else:
-                    print_fail(f"Expected contact_name 'Mom', got '{data['contact_name']}'")
-                    test_results["failed"] += 1
-                    test_results["errors"].append(f"POST /api/sos - contact_name is '{data['contact_name']}' not 'Mom'")
-                    return False
-                
-                test_results["passed"] += 1
-            else:
+            if missing_fields:
                 print_fail(f"Response missing fields: {missing_fields}")
                 test_results["failed"] += 1
                 test_results["errors"].append(f"POST /api/sos - missing fields: {missing_fields}")
+                return False
+            
+            # Verify maps_link contains coordinates
+            maps_link = data["maps_link"]
+            if "12.9352" in maps_link and "77.6245" in maps_link and "google.com/maps" in maps_link:
+                print_pass(f"Maps link contains coordinates: {maps_link}")
+            else:
+                print_fail(f"Maps link doesn't contain expected coordinates: {maps_link}")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"POST /api/sos - maps_link incorrect: {maps_link}")
+                return False
+            
+            # Verify message is non-empty and contains maps_link and "SOS"
+            message = data["message"]
+            if message and maps_link in message and "SOS" in message:
+                print_pass("Message is non-empty and contains maps_link and 'SOS'")
+            else:
+                print_fail(f"Message doesn't meet requirements: {message}")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"POST /api/sos - message invalid: {message}")
+                return False
+            
+            # Verify channel
+            if data["channel"] == "sms":
+                print_pass("Channel is 'sms'")
+            else:
+                print_fail(f"Expected channel 'sms', got '{data['channel']}'")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"POST /api/sos - channel is '{data['channel']}' not 'sms'")
+                return False
+            
+            # Verify recipients is a non-empty list
+            recipients = data["recipients"]
+            if isinstance(recipients, list) and len(recipients) > 0:
+                print_pass(f"Recipients is a non-empty list with {len(recipients)} entries")
+                
+                # Verify each recipient has name, phone, and status "sent"
+                for i, recipient in enumerate(recipients):
+                    required_recipient_fields = ["name", "phone", "status"]
+                    missing_recipient_fields = [f for f in required_recipient_fields if f not in recipient]
+                    
+                    if missing_recipient_fields:
+                        print_fail(f"Recipient {i} missing fields: {missing_recipient_fields}")
+                        test_results["failed"] += 1
+                        test_results["errors"].append(f"POST /api/sos - recipient {i} missing fields: {missing_recipient_fields}")
+                        return False
+                    
+                    if recipient["status"] != "sent":
+                        print_fail(f"Recipient {i} status is '{recipient['status']}', expected 'sent'")
+                        test_results["failed"] += 1
+                        test_results["errors"].append(f"POST /api/sos - recipient {i} status not 'sent'")
+                        return False
+                
+                print_pass("All recipients have name, phone, and status 'sent'")
+                test_results["passed"] += 1
+                return True
+            else:
+                print_fail("Recipients is empty or not a list")
+                test_results["failed"] += 1
+                test_results["errors"].append("POST /api/sos - recipients is empty or not a list")
                 return False
         else:
             print_fail(f"Expected 200, got {response.status_code}")
@@ -336,44 +585,9 @@ def test_sos_endpoint():
             test_results["errors"].append(f"POST /api/sos - returned {response.status_code}")
             return False
     except Exception as e:
-        print_fail(f"Exception creating SOS with coordinates: {str(e)}")
+        print_fail(f"Exception creating SOS: {str(e)}")
         test_results["failed"] += 1
-        test_results["errors"].append(f"POST /api/sos (with coords) - Exception: {str(e)}")
-        return False
-    
-    # Test 2: SOS without coordinates (null coords)
-    print_info("\nTest 2: Creating SOS with null coordinates")
-    try:
-        payload = {
-            "contact_name": "Mom"
-        }
-        response = requests.post(f"{BACKEND_URL}/sos", json=payload, timeout=10)
-        print_info(f"Status Code: {response.status_code}")
-        print_info(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            data = response.json()
-            maps_link = data.get("maps_link", "")
-            
-            # Should have fallback maps link
-            if "google.com/maps" in maps_link:
-                print_pass(f"Fallback maps link provided: {maps_link}")
-                test_results["passed"] += 1
-                return True
-            else:
-                print_fail(f"No valid fallback maps link: {maps_link}")
-                test_results["failed"] += 1
-                test_results["errors"].append(f"POST /api/sos (null coords) - invalid fallback maps_link: {maps_link}")
-                return False
-        else:
-            print_fail(f"Expected 200, got {response.status_code}")
-            test_results["failed"] += 1
-            test_results["errors"].append(f"POST /api/sos (null coords) - returned {response.status_code}")
-            return False
-    except Exception as e:
-        print_fail(f"Exception creating SOS without coordinates: {str(e)}")
-        test_results["failed"] += 1
-        test_results["errors"].append(f"POST /api/sos (null coords) - Exception: {str(e)}")
+        test_results["errors"].append(f"POST /api/sos - Exception: {str(e)}")
         return False
 
 def print_summary():
@@ -406,6 +620,7 @@ def main():
     test_root_endpoint()
     test_chat_endpoint()
     test_reports_endpoint()
+    test_contacts_endpoint()
     test_sos_endpoint()
     
     # Print summary

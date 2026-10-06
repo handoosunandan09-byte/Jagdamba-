@@ -21,6 +21,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+USER_NAME = "Priya"
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -94,17 +95,39 @@ class Report(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class ContactCreate(BaseModel):
+    name: str
+    phone: str
+    relation: Optional[str] = None
+
+
+class Contact(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    phone: str
+    relation: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class SosCreate(BaseModel):
     lat: Optional[float] = None
     lng: Optional[float] = None
-    contact_name: Optional[str] = "Trusted contact"
     accuracy: Optional[float] = None
+    channel: Optional[str] = "sms"  # sms | whatsapp
+
+
+class SosRecipient(BaseModel):
+    name: str
+    phone: str
+    status: str = "sent"
 
 
 class SosResponse(BaseModel):
     id: str
     maps_link: str
-    contact_name: str
+    message: str
+    channel: str
+    recipients: List[SosRecipient]
     shared_at: datetime
 
 
@@ -155,23 +178,62 @@ async def create_sos(payload: SosCreate):
         maps_link = f"https://www.google.com/maps?q={payload.lat},{payload.lng}"
     else:
         maps_link = "https://www.google.com/maps"
+
+    # Fetch trusted contacts
+    rows = await db.contacts.find().sort("created_at", 1).to_list(100)
+    contacts = [Contact(**r) for r in rows]
+
+    message = (
+        f"\U0001F6A8 SOS from {USER_NAME} \u2014 she may need help right now. "
+        f"Live location: {maps_link}  Please reach out or call her immediately."
+    )
+
+    channel = payload.channel or "sms"
+    recipients = [SosRecipient(name=c.name, phone=c.phone, status="sent") for c in contacts]
+
     doc = {
         "id": sos_id,
         "lat": payload.lat,
         "lng": payload.lng,
         "accuracy": payload.accuracy,
-        "contact_name": payload.contact_name,
+        "channel": channel,
         "maps_link": maps_link,
+        "message": message,
+        "recipients": [r.dict() for r in recipients],
         "shared_at": datetime.now(timezone.utc),
     }
     await db.sos_events.insert_one(doc)
-    logger.info(f"SOS shared with {payload.contact_name}: {maps_link}")
+    logger.info(f"SOS ({channel}) to {len(recipients)} contacts: {maps_link}")
+    # NOTE: Delivery is SIMULATED for the hackathon demo. Plug in Twilio to send for real.
     return SosResponse(
         id=sos_id,
         maps_link=maps_link,
-        contact_name=payload.contact_name or "Trusted contact",
+        message=message,
+        channel=channel,
+        recipients=recipients,
         shared_at=doc["shared_at"],
     )
+
+
+@api_router.get("/contacts", response_model=List[Contact])
+async def list_contacts():
+    rows = await db.contacts.find().sort("created_at", 1).to_list(100)
+    return [Contact(**r) for r in rows]
+
+
+@api_router.post("/contacts", response_model=Contact)
+async def create_contact(payload: ContactCreate):
+    contact = Contact(**payload.dict())
+    await db.contacts.insert_one(contact.dict())
+    return contact
+
+
+@api_router.delete("/contacts/{contact_id}")
+async def delete_contact(contact_id: str):
+    res = await db.contacts.delete_one({"id": contact_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    return {"deleted": True, "id": contact_id}
 
 
 @api_router.post("/status", response_model=StatusCheck)
@@ -196,6 +258,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def seed_contacts():
+    try:
+        count = await db.contacts.count_documents({})
+        if count == 0:
+            defaults = [
+                Contact(name="Mom", phone="+91 99887 76655", relation="Family"),
+                Contact(name="Rahul (Brother)", phone="+91 98111 22233", relation="Family"),
+            ]
+            await db.contacts.insert_many([c.dict() for c in defaults])
+            logger.info("Seeded default trusted contacts")
+    except Exception as e:
+        logger.warning(f"Contact seed skipped: {e}")
 
 
 @app.on_event("shutdown")

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 const durations = [15, 30, 60];
 
-const SafetyModeScreen = ({ onBack }) => {
+const SafetyModeScreen = ({ onBack, onManageContacts }) => {
   const [selected, setSelected] = useState(30);
   const [active, setActive] = useState(false);
   const [remaining, setRemaining] = useState(0);
@@ -83,7 +83,7 @@ const SafetyModeScreen = ({ onBack }) => {
               <p className="text-[12px] text-[#6B7A77]">Mom • +91 99887 76655</p>
             </div>
           </div>
-          <button className="text-[12px] font-semibold text-[#1C8C78]">Change</button>
+          <button onClick={onManageContacts} className="text-[12px] font-semibold text-[#1C8C78]">Change</button>
         </div>
 
         {!active ? (

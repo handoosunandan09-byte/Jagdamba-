@@ -11,6 +11,7 @@ import ReportScreen from "./components/ReportScreen";
 import AlertsScreen from "./components/AlertsScreen";
 import ProfileScreen from "./components/ProfileScreen";
 import SosScreen from "./components/SosScreen";
+import ContactsScreen from "./components/ContactsScreen";
 
 // Tabs that live in the bottom nav
 const TABS = ["home", "nearby", "alerts", "profile"];
@@ -36,12 +37,15 @@ function App() {
           <SosScreen
             onCancel={goHome}
             onTalk={() => navigate("talk", { emergency: true })}
+            onManageContacts={() => navigate("contacts")}
           />
         );
+      case "contacts":
+        return <ContactsScreen onBack={goHome} />;
       case "talk":
         return <TalkScreen onBack={goHome} emergency={screenProps.emergency} />;
       case "safety":
-        return <SafetyModeScreen onBack={goHome} />;
+        return <SafetyModeScreen onBack={goHome} onManageContacts={() => navigate("contacts")} />;
       case "report":
         return <ReportScreen onBack={goHome} />;
       case "nearby":
@@ -49,7 +53,7 @@ function App() {
       case "alerts":
         return <AlertsScreen />;
       case "profile":
-        return <ProfileScreen />;
+        return <ProfileScreen onNavigate={navigate} />;
       case "home":
       default:
         return <HomeScreen onNavigate={navigate} />;

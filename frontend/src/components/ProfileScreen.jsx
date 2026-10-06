@@ -3,12 +3,12 @@ import { currentUser, emergencyContacts } from "../mock";
 import { MapPin, Phone, Bell, ShieldCheck, Users, ChevronRight, LogOut } from "lucide-react";
 
 const rows = [
-  { icon: Users, label: "Trusted contacts", value: "3 added" },
+  { icon: Users, label: "Trusted contacts", value: "Manage", action: "contacts" },
   { icon: ShieldCheck, label: "Safety Mode defaults", value: "30 min" },
   { icon: Bell, label: "Alert notifications", value: "On" },
 ];
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ onNavigate }) => {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto no-scrollbar float-up">
@@ -27,7 +27,7 @@ const ProfileScreen = () => {
             {rows.map((r) => {
               const Icon = r.icon;
               return (
-                <button key={r.label} className="w-full flex items-center gap-3 p-4 hover:bg-[#FBF7F1] transition-colors">
+                <button key={r.label} onClick={() => r.action && onNavigate && onNavigate(r.action)} className="w-full flex items-center gap-3 p-4 hover:bg-[#FBF7F1] transition-colors">
                   <span className="h-9 w-9 rounded-full bg-[#DCEEE9] text-[#1C8C78] flex items-center justify-center"><Icon className="h-4.5 w-4.5" /></span>
                   <span className="flex-1 text-left text-[14px] font-semibold text-[#1B2A28]">{r.label}</span>
                   <span className="text-[13px] text-[#6B7A77]">{r.value}</span>

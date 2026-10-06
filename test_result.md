@@ -152,6 +152,45 @@ backend:
       - working: true
         agent: "testing"
         comment: "POST /api/sos working correctly for both scenarios. Test 1: With coordinates (lat: 12.9352, lng: 77.6245, contact_name: 'Mom') returns 200 with maps_link 'https://www.google.com/maps?q=12.9352,77.6245', correct contact_name, UUID id, and shared_at timestamp. Test 2: Without coordinates (null lat/lng) returns 200 with fallback maps_link 'https://www.google.com/maps'. Data persisted to MongoDB sos_events collection. Backend logs confirm SOS events logged correctly."
+      - working: true
+        agent: "testing"
+        comment: "POST /api/sos UPDATED to use trusted contacts from database. Tested with lat: 12.9352, lng: 77.6245, channel: 'sms'. Returns 200 with: maps_link containing coordinates, message with SOS text and maps_link, channel 'sms', recipients list with 2 entries (Mom and Rahul (Brother)), each with name, phone, and status 'sent'. All fields present: id, maps_link, message, channel, recipients, shared_at. Data persisted to MongoDB. NOTE: SMS delivery is SIMULATED for demo purposes."
+
+  - task: "Trusted Contacts - List"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/contacts working correctly. Returns 200 with list of contacts. Seeded contacts verified: 'Mom' (+91 99887 76655, Family) and 'Rahul (Brother)' (+91 98111 22233, Family). Each contact has required fields: id (UUID), name, phone, relation, created_at. Contacts seeded on startup via seed_contacts() function. Data persisted to MongoDB contacts collection."
+
+  - task: "Trusted Contacts - Create"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/contacts working correctly. Created contact with name: 'Anita (Friend)', phone: '+91 90000 11111', relation: 'Friend'. Returns 200 with created contact including UUID id and created_at timestamp. Verified contact appears in subsequent GET /api/contacts. Data persisted to MongoDB contacts collection."
+
+  - task: "Trusted Contacts - Delete"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "DELETE /api/contacts/{id} working correctly. Test 1: Deleted existing contact, returns 200 with {deleted: true, id: <contact_id>}. Verified contact removed from subsequent GET /api/contacts. Test 2: DELETE with non-existent id correctly returns 404 with 'Contact not found' error. Data properly removed from MongoDB contacts collection."
 
 frontend:
   - task: "Frontend UI"
@@ -169,14 +208,14 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: false
-  last_tested: "2026-10-06T11:39:06Z"
+  last_tested: "2026-10-06T11:58:55Z"
   backend_url: "https://deploy-check-110.preview.emergentagent.com/api"
 
 test_plan:
   current_focus:
-    - "All backend endpoints tested and passing"
+    - "All backend endpoints tested and passing including new contacts management"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
@@ -184,3 +223,5 @@ test_plan:
 agent_communication:
   - agent: "testing"
     message: "Comprehensive backend API testing completed. All 8 test cases passed successfully. Created /app/backend_test.py for automated testing. All endpoints (GET /api/, POST /api/chat, POST /api/reports, GET /api/reports, POST /api/sos) are working correctly. Gemini integration confirmed working with multi-turn conversation memory. MongoDB persistence verified for all collections (chat_messages, reports, sos_events). No errors found in backend logs. Backend is production-ready."
+  - agent: "testing"
+    message: "NEW FEATURE TESTING COMPLETE - Trusted Contacts Management. All 13 tests passed (100% success rate). Tested 4 new/updated endpoints: (1) GET /api/contacts - returns seeded contacts 'Mom' and 'Rahul (Brother)' with all required fields. (2) POST /api/contacts - successfully creates new contacts with UUID id. (3) DELETE /api/contacts/{id} - deletes contacts and returns 404 for non-existent ids. (4) POST /api/sos UPDATED - now fetches trusted contacts from DB and returns recipients list with status 'sent' for each contact. All endpoints working correctly with proper MongoDB persistence. SMS delivery is SIMULATED (not real). Backend ready for production."
