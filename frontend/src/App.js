@@ -10,6 +10,7 @@ import NearbyScreen from "./components/NearbyScreen";
 import ReportScreen from "./components/ReportScreen";
 import AlertsScreen from "./components/AlertsScreen";
 import ProfileScreen from "./components/ProfileScreen";
+import SosScreen from "./components/SosScreen";
 
 // Tabs that live in the bottom nav
 const TABS = ["home", "nearby", "alerts", "profile"];
@@ -30,6 +31,13 @@ function App() {
 
   const renderScreen = () => {
     switch (screen) {
+      case "sos":
+        return (
+          <SosScreen
+            onCancel={goHome}
+            onTalk={() => navigate("talk", { emergency: true })}
+          />
+        );
       case "talk":
         return <TalkScreen onBack={goHome} emergency={screenProps.emergency} />;
       case "safety":

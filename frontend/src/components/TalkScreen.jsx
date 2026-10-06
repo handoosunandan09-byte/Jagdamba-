@@ -1,36 +1,50 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import ScreenHeader from "./ScreenHeader";
-import { saathiIntro, saathiReplies, defaultSaathiReply } from "../mock";
+import { saathiIntro } from "../mock";
+import { sendChat, getSessionId } from "../lib/api";
+import { useVoiceInput } from "../hooks/useVoiceInput";
 import { Send, Mic, ShieldCheck } from "lucide-react";
-
-const getReply = (text) => {
-  const t = text.toLowerCase();
-  for (const r of saathiReplies) {
-    if (r.keywords.some((k) => t.includes(k))) return r.reply;
-  }
-  return defaultSaathiReply;
-};
+import { toast } from "sonner";
 
 const TalkScreen = ({ onBack, emergency }) => {
   const [messages, setMessages] = useState([{ from: "saathi", text: saathiIntro }]);
   const [input, setInput] = useState(emergency ? "I need help right now" : "");
   const [typing, setTyping] = useState(false);
   const scrollRef = useRef(null);
+  const sessionId = useRef(getSessionId()).current;
+
+  const { listening, supported, toggle } = useVoiceInput(useCallback((t) => setInput(t), []));
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing]);
 
-  const send = () => {
+  const send = async () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text || typing) return;
     setMessages((m) => [...m, { from: "user", text }]);
     setInput("");
     setTyping(true);
-    setTimeout(() => {
+    try {
+      const reply = await sendChat(sessionId, text);
+      setMessages((m) => [...m, { from: "saathi", text: reply }]);
+    } catch (e) {
+      setMessages((m) => [
+        ...m,
+        { from: "saathi", text: "I'm having trouble connecting right now. If this is urgent, please call 100 (Police) or 108 (Ambulance)." },
+      ]);
+      toast.error("Couldn't reach Saathi. Check your connection.");
+    } finally {
       setTyping(false);
-      setMessages((m) => [...m, { from: "saathi", text: getReply(text) }]);
-    }, 900);
+    }
+  };
+
+  const onMic = () => {
+    if (!supported) {
+      toast("Voice input isn't supported on this browser", { description: "Try Chrome or Edge." });
+      return;
+    }
+    toggle();
   };
 
   const suggestions = ["Someone is following me", "Report a broken street light", "I feel unsafe walking home"];
@@ -47,7 +61,7 @@ const TalkScreen = ({ onBack, emergency }) => {
               </span>
             )}
             <div
-              className={`max-w-[78%] rounded-2xl px-4 py-2.5 text-[14px] leading-snug ${
+              className={`max-w-[78%] rounded-2xl px-4 py-2.5 text-[14px] leading-snug whitespace-pre-wrap ${
                 m.from === "user"
                   ? "bg-[#E5603C] text-white rounded-br-md"
                   : "bg-white border border-[#EFE7DB] text-[#1B2A28] rounded-bl-md"
@@ -83,6 +97,11 @@ const TalkScreen = ({ onBack, emergency }) => {
             </button>
           ))}
         </div>
+        {listening && (
+          <p className="text-[12px] font-medium text-[#E5603C] mb-2 px-1 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-[#E5603C] animate-pulse" /> Listening… speak now
+          </p>
+        )}
         <div className="flex items-center gap-2 bg-white border border-[#EFE7DB] rounded-full pl-4 pr-1.5 py-1.5">
           <input
             value={input}
@@ -91,7 +110,13 @@ const TalkScreen = ({ onBack, emergency }) => {
             placeholder="Tell Saathi what happened…"
             className="flex-1 bg-transparent outline-none text-[14px] text-[#1B2A28] placeholder:text-[#9AA7A3]"
           />
-          <button className="h-9 w-9 rounded-full bg-[#DCEEE9] text-[#1C8C78] flex items-center justify-center hover:bg-[#cfe8e2] transition-colors" aria-label="Voice">
+          <button
+            onClick={onMic}
+            className={`h-9 w-9 rounded-full flex items-center justify-center transition-colors ${
+              listening ? "bg-[#E5603C] text-white animate-pulse" : "bg-[#DCEEE9] text-[#1C8C78] hover:bg-[#cfe8e2]"
+            }`}
+            aria-label="Voice input"
+          >
             <Mic className="h-4.5 w-4.5" />
           </button>
           <button onClick={send} className="h-9 w-9 rounded-full bg-[#E5603C] text-white flex items-center justify-center hover:bg-[#d9542f] transition-colors" aria-label="Send">

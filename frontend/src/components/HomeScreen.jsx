@@ -19,7 +19,7 @@ const HomeScreen = ({ onNavigate }) => {
         <div className="absolute inset-0 help-glow rounded-full" />
         <span className="absolute h-[220px] w-[220px] rounded-full bg-[#E5603C]/30 pulse-ring" />
         <button
-          onClick={() => onNavigate("talk", { emergency: true })}
+          onClick={() => onNavigate("sos")}
           className="relative h-[210px] w-[210px] rounded-full flex flex-col items-center justify-center text-white shadow-[0_18px_40px_-10px_rgba(229,96,60,0.65)] active:scale-95 transition-transform duration-200"
           style={{ background: "radial-gradient(circle at 50% 35%, #F0734E 0%, #E5603C 55%, #D9542F 100%)" }}
         >

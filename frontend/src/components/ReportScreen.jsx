@@ -1,24 +1,33 @@
 import React, { useState } from "react";
 import ScreenHeader from "./ScreenHeader";
 import { issueCategories, currentUser } from "../mock";
-import { MapPin, Camera, CheckCircle2 } from "lucide-react";
+import { MapPin, Camera, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { submitReport } from "../lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 const ReportScreen = ({ onBack }) => {
   const [category, setCategory] = useState("");
   const [desc, setDesc] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [ticket, setTicket] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const submit = () => {
+  const submit = async () => {
     if (!category || !desc.trim()) {
       toast.error("Please add a category and description");
       return;
     }
-    const reports = JSON.parse(localStorage.getItem("saathi_reports") || "[]");
-    reports.unshift({ id: Date.now(), category, desc, location: currentUser.location, at: new Date().toISOString() });
-    localStorage.setItem("saathi_reports", JSON.stringify(reports));
-    setSubmitted(true);
+    setLoading(true);
+    try {
+      const data = await submitReport({ category, description: desc, location: currentUser.location });
+      setTicket(data.ticket);
+      setSubmitted(true);
+    } catch (e) {
+      toast.error("Couldn't submit the report. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -31,7 +40,7 @@ const ReportScreen = ({ onBack }) => {
           </span>
           <h3 className="text-[20px] font-extrabold text-[#1B2A28]">Thank you, Priya!</h3>
           <p className="text-[14px] text-[#6B7A77] mt-2">Your report has been logged and forwarded to the local authorities. We&apos;ll notify you when it&apos;s picked up.</p>
-          <p className="text-[12px] text-[#9AA7A3] mt-2">Ticket #{Math.floor(Math.random() * 90000 + 10000)}</p>
+          <p className="text-[12px] text-[#9AA7A3] mt-2">Ticket #{ticket}</p>
           <button onClick={onBack} className="mt-7 w-full rounded-2xl bg-[#E5603C] text-white py-3.5 text-[15px] font-bold hover:bg-[#d9542f] transition-colors">Back to Home</button>
         </div>
       </div>
@@ -80,8 +89,9 @@ const ReportScreen = ({ onBack }) => {
           <span className="text-[13px] font-medium">Add a photo (optional)</span>
         </button>
 
-        <button onClick={submit} className="w-full rounded-2xl bg-[#E5603C] text-white py-4 text-[15px] font-bold shadow-[0_12px_28px_-10px_rgba(229,96,60,0.6)] hover:bg-[#d9542f] active:scale-[0.99] transition-all">
-          Submit Report
+        <button onClick={submit} disabled={loading} className="w-full rounded-2xl bg-[#E5603C] text-white py-4 text-[15px] font-bold shadow-[0_12px_28px_-10px_rgba(229,96,60,0.6)] hover:bg-[#d9542f] active:scale-[0.99] transition-all disabled:opacity-70 flex items-center justify-center gap-2">
+          {loading && <Loader2 className="h-5 w-5 animate-spin" />}
+          {loading ? "Submitting…" : "Submit Report"}
         </button>
       </div>
     </div>
