@@ -1,6 +1,12 @@
 // craco.config.js
 const path = require("path");
+const webpack = require("webpack");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 require("dotenv").config();
+
+// Cesium static assets live under node_modules/cesium/Build/Cesium
+const cesiumSource = path.join(__dirname, "node_modules", "cesium", "Build", "Cesium");
+const cesiumBaseUrl = "cesium";
 
 // Check if we're in development/preview mode (not production build)
 // Craco sets NODE_ENV=development for start, NODE_ENV=production for build
@@ -127,6 +133,35 @@ let webpackConfig = {
       if (config.enableHealthCheck && healthPluginInstance) {
         webpackConfig.plugins.push(healthPluginInstance);
       }
+
+      // ---- CesiumJS static assets + base URL ----
+      webpackConfig.plugins.push(
+        new CopyWebpackPlugin({
+          patterns: [
+            { from: path.join(cesiumSource, "Workers"), to: `${cesiumBaseUrl}/Workers` },
+            { from: path.join(cesiumSource, "ThirdParty"), to: `${cesiumBaseUrl}/ThirdParty` },
+            { from: path.join(cesiumSource, "Assets"), to: `${cesiumBaseUrl}/Assets` },
+            { from: path.join(cesiumSource, "Widgets"), to: `${cesiumBaseUrl}/Widgets` },
+          ],
+        }),
+        new webpack.DefinePlugin({
+          CESIUM_BASE_URL: JSON.stringify(`/${cesiumBaseUrl}`),
+        })
+      );
+      // Cesium ships ESM with dynamic requires; silence the related webpack warnings
+      webpackConfig.module.unknownContextCritical = false;
+
+      // Cesium 1.123 imports a @zip.js subpath removed in newer @zip.js versions.
+      // Force that exact specifier to the pinned 2.7.45 file that still ships it.
+      webpackConfig.resolve = webpackConfig.resolve || {};
+      webpackConfig.resolve.alias = {
+        ...(webpackConfig.resolve.alias || {}),
+        "@zip.js/zip.js/lib/zip-no-worker.js": path.resolve(
+          __dirname,
+          "node_modules/@zip.js/zip.js/lib/zip-no-worker.js"
+        ),
+      };
+
 
       // Overlay's HTML injection + compile-error capture; self-gates on mode !== development.
       if (emergentOverlay) {

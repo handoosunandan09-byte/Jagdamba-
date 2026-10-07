@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, Suspense, lazy } from "react";
 import "./App.css";
 import { Toaster } from "sonner";
 import Header from "./components/Header";
@@ -13,6 +13,9 @@ import ProfileScreen from "./components/ProfileScreen";
 import SosScreen from "./components/SosScreen";
 import ContactsScreen from "./components/ContactsScreen";
 import GuardianScreen from "./components/GuardianScreen";
+
+// Heavy 3D module — loaded only when the user opens the Guardian City map
+const GuardianCityMap = lazy(() => import("./components/map/GuardianCityMap"));
 
 // Tabs that live in the bottom nav
 const TABS = ["home", "nearby", "alerts", "profile"];
@@ -52,7 +55,7 @@ function App() {
       case "report":
         return <ReportScreen onBack={goHome} />;
       case "nearby":
-        return <NearbyScreen onBack={goHome} />;
+        return <NearbyScreen onBack={goHome} onOpenMap={() => navigate("guardianmap")} />;
       case "alerts":
         return <AlertsScreen />;
       case "profile":
@@ -74,6 +77,21 @@ function App() {
           </main>
         </div>
         {showChrome && <BottomNav active={activeTab} onNavigate={(id) => navigate(id)} />}
+
+        {/* Guardian City 3D map — full-bleed overlay, lazily mounted */}
+        {screen === "guardianmap" && (
+          <div className="absolute inset-0 z-40">
+            <Suspense fallback={
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#EDEDE7]">
+                <div className="h-12 w-12 rounded-full border-4 border-[#0D9488]/30 border-t-[#0D9488] animate-spin mb-4" />
+                <p className="text-[14px] font-semibold text-[#334155]">Loading Guardian City engine…</p>
+              </div>
+            }>
+              <GuardianCityMap onBack={goHome} />
+            </Suspense>
+          </div>
+        )}
+
         <Toaster position="top-center" richColors toastOptions={{ style: { borderRadius: "16px" } }} />
       </div>
     </div>

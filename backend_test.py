@@ -590,6 +590,328 @@ def test_sos_endpoint():
         test_results["errors"].append(f"POST /api/sos - Exception: {str(e)}")
         return False
 
+def test_spatial_endpoint():
+    """Test GET /api/spatial/building-summary - new spatial endpoint"""
+    print_test("GET /api/spatial/building-summary - Spatial building data")
+    
+    # Test 1: Query with specific coordinates near Vydehi Hospital
+    print_info("Test 1: Query building at lat=12.9754, lng=77.6096 with user at lat=12.9718, lng=77.6071")
+    test1_response = None
+    try:
+        params = {
+            "lat": 12.9754,
+            "lng": 77.6096,
+            "user_lat": 12.9718,
+            "user_lng": 77.6071
+        }
+        response = requests.get(f"{BACKEND_URL}/spatial/building-summary", params=params, timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        print_info(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            test1_response = data  # Save for determinism test
+            
+            # Verify required fields
+            required_fields = ["name", "building_type", "levels", "height_m", "ward", "address", 
+                             "distance_from_user_m", "zone_status", "nearest"]
+            missing_fields = [f for f in required_fields if f not in data]
+            
+            if missing_fields:
+                print_fail(f"Response missing fields: {missing_fields}")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"GET /api/spatial/building-summary - missing fields: {missing_fields}")
+                return False
+            
+            # Verify field types
+            if not isinstance(data["name"], str):
+                print_fail(f"name should be string, got {type(data['name'])}")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/spatial/building-summary - name not string")
+                return False
+            
+            if not isinstance(data["building_type"], str):
+                print_fail(f"building_type should be string, got {type(data['building_type'])}")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/spatial/building-summary - building_type not string")
+                return False
+            
+            if not isinstance(data["levels"], int):
+                print_fail(f"levels should be int, got {type(data['levels'])}")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/spatial/building-summary - levels not int")
+                return False
+            
+            if not isinstance(data["height_m"], (int, float)):
+                print_fail(f"height_m should be number, got {type(data['height_m'])}")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/spatial/building-summary - height_m not number")
+                return False
+            
+            if not isinstance(data["ward"], str):
+                print_fail(f"ward should be string, got {type(data['ward'])}")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/spatial/building-summary - ward not string")
+                return False
+            
+            if not isinstance(data["address"], str):
+                print_fail(f"address should be string, got {type(data['address'])}")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/spatial/building-summary - address not string")
+                return False
+            
+            if not isinstance(data["distance_from_user_m"], int):
+                print_fail(f"distance_from_user_m should be int, got {type(data['distance_from_user_m'])}")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/spatial/building-summary - distance_from_user_m not int")
+                return False
+            
+            # Verify distance is reasonable (should be a few hundred meters)
+            distance = data["distance_from_user_m"]
+            if 200 <= distance <= 800:
+                print_pass(f"distance_from_user_m is reasonable: {distance}m")
+            else:
+                print_fail(f"distance_from_user_m seems unreasonable: {distance}m (expected 200-800m)")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"GET /api/spatial/building-summary - distance {distance}m seems wrong")
+                return False
+            
+            # Verify zone_status is one of the expected values
+            zone_status = data["zone_status"]
+            valid_zones = ["Normal", "High Footfall", "Caution"]
+            if zone_status in valid_zones:
+                print_pass(f"zone_status is valid: {zone_status}")
+            else:
+                print_fail(f"zone_status '{zone_status}' not in {valid_zones}")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"GET /api/spatial/building-summary - invalid zone_status: {zone_status}")
+                return False
+            
+            # Verify nearest object structure
+            nearest = data["nearest"]
+            if not isinstance(nearest, dict):
+                print_fail(f"nearest should be dict, got {type(nearest)}")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/spatial/building-summary - nearest not dict")
+                return False
+            
+            required_nearest = ["hospital", "police", "pharmacy"]
+            missing_nearest = [f for f in required_nearest if f not in nearest]
+            if missing_nearest:
+                print_fail(f"nearest missing keys: {missing_nearest}")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"GET /api/spatial/building-summary - nearest missing: {missing_nearest}")
+                return False
+            
+            # Verify each nearest facility has name and distance_m
+            for facility_type in required_nearest:
+                facility = nearest[facility_type]
+                if not isinstance(facility, dict):
+                    print_fail(f"nearest.{facility_type} should be dict, got {type(facility)}")
+                    test_results["failed"] += 1
+                    test_results["errors"].append(f"GET /api/spatial/building-summary - nearest.{facility_type} not dict")
+                    return False
+                
+                if "name" not in facility or not isinstance(facility["name"], str):
+                    print_fail(f"nearest.{facility_type}.name missing or not string")
+                    test_results["failed"] += 1
+                    test_results["errors"].append(f"GET /api/spatial/building-summary - nearest.{facility_type}.name invalid")
+                    return False
+                
+                if "distance_m" not in facility or not isinstance(facility["distance_m"], int):
+                    print_fail(f"nearest.{facility_type}.distance_m missing or not int")
+                    test_results["failed"] += 1
+                    test_results["errors"].append(f"GET /api/spatial/building-summary - nearest.{facility_type}.distance_m invalid")
+                    return False
+                
+                if facility["distance_m"] < 0:
+                    print_fail(f"nearest.{facility_type}.distance_m should be non-negative, got {facility['distance_m']}")
+                    test_results["failed"] += 1
+                    test_results["errors"].append(f"GET /api/spatial/building-summary - nearest.{facility_type}.distance_m negative")
+                    return False
+            
+            print_pass("All nearest facilities have valid name (string) and distance_m (non-negative int)")
+            print_info(f"Building: {data['building_type']}, {data['levels']} levels, {data['height_m']}m")
+            print_info(f"Nearest hospital: {nearest['hospital']['name']} ({nearest['hospital']['distance_m']}m)")
+            print_info(f"Nearest police: {nearest['police']['name']} ({nearest['police']['distance_m']}m)")
+            print_info(f"Nearest pharmacy: {nearest['pharmacy']['name']} ({nearest['pharmacy']['distance_m']}m)")
+            
+            test_results["passed"] += 1
+        else:
+            print_fail(f"Expected 200, got {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"GET /api/spatial/building-summary (test1) - returned {response.status_code}")
+            return False
+    except Exception as e:
+        print_fail(f"Exception in test 1: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"GET /api/spatial/building-summary (test1) - Exception: {str(e)}")
+        return False
+    
+    # Test 2: Query near known incident (should be "Caution" zone)
+    print_info("\nTest 2: Query building at lat=12.9690, lng=77.6150 (near incident, omit user params)")
+    try:
+        params = {
+            "lat": 12.9690,
+            "lng": 77.6150
+        }
+        response = requests.get(f"{BACKEND_URL}/spatial/building-summary", params=params, timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        print_info(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Verify zone_status is "Caution" (within 250m of incident at 12.9690, 77.6150)
+            zone_status = data["zone_status"]
+            if zone_status == "Caution":
+                print_pass(f"zone_status is 'Caution' as expected (near incident)")
+            else:
+                print_fail(f"Expected zone_status 'Caution', got '{zone_status}'")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"GET /api/spatial/building-summary (test2) - zone_status not 'Caution': {zone_status}")
+                return False
+            
+            # Verify nearest facilities have reasonable distances
+            nearest = data["nearest"]
+            for facility_type in ["hospital", "police", "pharmacy"]:
+                distance = nearest[facility_type]["distance_m"]
+                if distance >= 0:
+                    print_pass(f"nearest.{facility_type}.distance_m is non-negative: {distance}m")
+                else:
+                    print_fail(f"nearest.{facility_type}.distance_m should be non-negative, got {distance}")
+                    test_results["failed"] += 1
+                    test_results["errors"].append(f"GET /api/spatial/building-summary (test2) - nearest.{facility_type}.distance_m negative")
+                    return False
+            
+            test_results["passed"] += 1
+        else:
+            print_fail(f"Expected 200, got {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"GET /api/spatial/building-summary (test2) - returned {response.status_code}")
+            return False
+    except Exception as e:
+        print_fail(f"Exception in test 2: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"GET /api/spatial/building-summary (test2) - Exception: {str(e)}")
+        return False
+    
+    # Test 3: Determinism check - call Test 1 again and verify building_type and levels are identical
+    print_info("\nTest 3: Determinism check - calling Test 1 again to verify consistent results")
+    try:
+        params = {
+            "lat": 12.9754,
+            "lng": 77.6096,
+            "user_lat": 12.9718,
+            "user_lng": 77.6071
+        }
+        response = requests.get(f"{BACKEND_URL}/spatial/building-summary", params=params, timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Compare building_type and levels with first call
+            if test1_response is None:
+                print_fail("Test 1 response not available for comparison")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/spatial/building-summary (test3) - test1 response missing")
+                return False
+            
+            if data["building_type"] == test1_response["building_type"]:
+                print_pass(f"building_type is deterministic: {data['building_type']}")
+            else:
+                print_fail(f"building_type changed: {test1_response['building_type']} -> {data['building_type']}")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"GET /api/spatial/building-summary (test3) - building_type not deterministic")
+                return False
+            
+            if data["levels"] == test1_response["levels"]:
+                print_pass(f"levels is deterministic: {data['levels']}")
+            else:
+                print_fail(f"levels changed: {test1_response['levels']} -> {data['levels']}")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"GET /api/spatial/building-summary (test3) - levels not deterministic")
+                return False
+            
+            test_results["passed"] += 1
+            return True
+        else:
+            print_fail(f"Expected 200, got {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"GET /api/spatial/building-summary (test3) - returned {response.status_code}")
+            return False
+    except Exception as e:
+        print_fail(f"Exception in test 3: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"GET /api/spatial/building-summary (test3) - Exception: {str(e)}")
+        return False
+
+def test_health_check():
+    """Quick health check for previously working endpoints"""
+    print_test("Health Check - Previously working endpoints")
+    
+    # Test 1: POST /api/sos
+    print_info("Test 1: Quick check POST /api/sos")
+    try:
+        payload = {
+            "lat": 12.97,
+            "lng": 77.60,
+            "channel": "sms"
+        }
+        response = requests.post(f"{BACKEND_URL}/sos", json=payload, timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            if "recipients" in data and isinstance(data["recipients"], list):
+                print_pass(f"POST /api/sos working - returns recipients list with {len(data['recipients'])} contacts")
+                test_results["passed"] += 1
+            else:
+                print_fail("POST /api/sos response missing recipients list")
+                test_results["failed"] += 1
+                test_results["errors"].append("POST /api/sos (health check) - missing recipients")
+                return False
+        else:
+            print_fail(f"POST /api/sos returned {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (health check) - returned {response.status_code}")
+            return False
+    except Exception as e:
+        print_fail(f"Exception checking POST /api/sos: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"POST /api/sos (health check) - Exception: {str(e)}")
+        return False
+    
+    # Test 2: GET /api/contacts
+    print_info("\nTest 2: Quick check GET /api/contacts")
+    try:
+        response = requests.get(f"{BACKEND_URL}/contacts", timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list) and len(data) >= 2:
+                contact_names = [c.get("name") for c in data]
+                print_pass(f"GET /api/contacts working - returns {len(data)} contacts: {contact_names}")
+                test_results["passed"] += 1
+                return True
+            else:
+                print_fail(f"GET /api/contacts returned unexpected data: {data}")
+                test_results["failed"] += 1
+                test_results["errors"].append("GET /api/contacts (health check) - unexpected data")
+                return False
+        else:
+            print_fail(f"GET /api/contacts returned {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"GET /api/contacts (health check) - returned {response.status_code}")
+            return False
+    except Exception as e:
+        print_fail(f"Exception checking GET /api/contacts: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"GET /api/contacts (health check) - Exception: {str(e)}")
+        return False
+
 def print_summary():
     """Print test summary"""
     print(f"\n{Colors.BLUE}{'='*80}{Colors.RESET}")
@@ -616,12 +938,11 @@ def main():
     print(f"{Colors.BLUE}Backend URL: {BACKEND_URL}{Colors.RESET}")
     print(f"{Colors.BLUE}{'='*80}{Colors.RESET}\n")
     
-    # Run all tests
-    test_root_endpoint()
-    test_chat_endpoint()
-    test_reports_endpoint()
-    test_contacts_endpoint()
-    test_sos_endpoint()
+    # Run new spatial endpoint tests
+    test_spatial_endpoint()
+    
+    # Run health check for previously working endpoints
+    test_health_check()
     
     # Print summary
     success = print_summary()

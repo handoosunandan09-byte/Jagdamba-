@@ -236,6 +236,85 @@ async def delete_contact(contact_id: str):
     return {"deleted": True, "id": contact_id}
 
 
+@api_router.get("/spatial/building-summary")
+async def building_summary(lat: float, lng: float, user_lat: float = 12.9718, user_lng: float = 77.6071):
+    import math
+
+    def haversine_m(a_lat, a_lng, b_lat, b_lng):
+        R = 6371000.0
+        p1, p2 = math.radians(a_lat), math.radians(b_lat)
+        dphi = math.radians(b_lat - a_lat)
+        dl = math.radians(b_lng - a_lng)
+        h = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+        return 2 * R * math.asin(math.sqrt(h))
+
+    # Mock civic infrastructure (mirrors frontend mapData)
+    infra = {
+        "hospital": [
+            {"name": "Bowring & Lady Curzon Hospital", "lat": 12.9823, "lng": 77.6063},
+            {"name": "Manipal Hospital (Old Airport Rd)", "lat": 12.9606, "lng": 77.6486},
+            {"name": "St. Philomena's Hospital", "lat": 12.9709, "lng": 77.6089},
+            {"name": "Vydehi Multispeciality (MG Rd)", "lat": 12.9754, "lng": 77.6096},
+        ],
+        "police": [
+            {"name": "Ashok Nagar Police Station", "lat": 12.9655, "lng": 77.6045},
+            {"name": "Cubbon Park Police Station", "lat": 12.9763, "lng": 77.5929},
+            {"name": "Indiranagar Police Station", "lat": 12.9719, "lng": 77.6412},
+            {"name": "Koramangala Police Station", "lat": 12.9352, "lng": 77.6245},
+        ],
+        "pharmacy": [
+            {"name": "Apollo Pharmacy (Brigade Rd)", "lat": 12.9718, "lng": 77.6071},
+            {"name": "MedPlus (Indiranagar 100ft)", "lat": 12.9711, "lng": 77.6401},
+            {"name": "Apollo Pharmacy (Koramangala)", "lat": 12.9345, "lng": 77.6265},
+            {"name": "MedPlus 24x7 (MG Road)", "lat": 12.9759, "lng": 77.6045},
+        ],
+    }
+
+    def nearest(kind):
+        best = None
+        for item in infra[kind]:
+            d = haversine_m(lat, lng, item["lat"], item["lng"])
+            if best is None or d < best["distance_m"]:
+                best = {"name": item["name"], "distance_m": round(d)}
+        return best
+
+    dist_user = round(haversine_m(user_lat, user_lng, lat, lng))
+
+    # Simple deterministic zone classification based on nearby incidents
+    incidents = [
+        {"lat": 12.9690, "lng": 77.6150},
+        {"lat": 12.9735, "lng": 77.6320},
+    ]
+    min_incident = min(haversine_m(lat, lng, i["lat"], i["lng"]) for i in incidents)
+    if min_incident < 250:
+        zone = "Caution"
+    elif dist_user < 400:
+        zone = "High Footfall"
+    else:
+        zone = "Normal"
+
+    # Pseudo building metadata derived from coordinates (stable)
+    seed = int(abs(lat * 1000) + abs(lng * 1000))
+    levels = 3 + (seed % 18)
+    height_m = levels * 3.2
+
+    return {
+        "name": "Selected structure",
+        "building_type": ["Residential", "Commercial", "Mixed-use", "Institutional"][seed % 4],
+        "levels": levels,
+        "height_m": round(height_m, 1),
+        "ward": "Central Bengaluru",
+        "address": f"{lat:.4f}, {lng:.4f}",
+        "distance_from_user_m": dist_user,
+        "zone_status": zone,
+        "nearest": {
+            "hospital": nearest("hospital"),
+            "police": nearest("police"),
+            "pharmacy": nearest("pharmacy"),
+        },
+    }
+
+
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
     status_obj = StatusCheck(**input.dict())

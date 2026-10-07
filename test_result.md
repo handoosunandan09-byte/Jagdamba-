@@ -192,6 +192,18 @@ backend:
         agent: "testing"
         comment: "DELETE /api/contacts/{id} working correctly. Test 1: Deleted existing contact, returns 200 with {deleted: true, id: <contact_id>}. Verified contact removed from subsequent GET /api/contacts. Test 2: DELETE with non-existent id correctly returns 404 with 'Contact not found' error. Data properly removed from MongoDB contacts collection."
 
+  - task: "Spatial Building Summary Endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/spatial/building-summary working correctly. Test 1: Query at lat=12.9754, lng=77.6096 with user_lat=12.9718, user_lng=77.6071 returns 200 with all required fields: name (string), building_type (Commercial), levels (12 int), height_m (38.4 number), ward (string), address (string), distance_from_user_m (483m - reasonable), zone_status (Normal - valid), nearest object with hospital/police/pharmacy each having name (string) and distance_m (non-negative int). Test 2: Query at lat=12.9690, lng=77.6150 (near incident) returns zone_status='Caution' as expected (within 250m of incident). All nearest facility distances are reasonable positive integers. Test 3: Determinism confirmed - building_type and levels are identical across multiple calls with same coordinates. Endpoint is deterministic based on coordinate seed calculation."
+
 frontend:
   - task: "Frontend UI"
     implemented: true
@@ -208,16 +220,16 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: false
-  last_tested: "2026-10-06T11:58:55Z"
+  last_tested: "2026-10-06T12:15:00Z"
   backend_url: "https://deploy-check-110.preview.emergentagent.com/api"
 
 test_plan:
   current_focus:
-    - "All backend endpoints tested and passing including new contacts management"
+    - "Spatial building summary endpoint tested and passing"
   stuck_tasks: []
-  test_all: true
+  test_all: false
   test_priority: "high_first"
 
 agent_communication:
@@ -225,3 +237,5 @@ agent_communication:
     message: "Comprehensive backend API testing completed. All 8 test cases passed successfully. Created /app/backend_test.py for automated testing. All endpoints (GET /api/, POST /api/chat, POST /api/reports, GET /api/reports, POST /api/sos) are working correctly. Gemini integration confirmed working with multi-turn conversation memory. MongoDB persistence verified for all collections (chat_messages, reports, sos_events). No errors found in backend logs. Backend is production-ready."
   - agent: "testing"
     message: "NEW FEATURE TESTING COMPLETE - Trusted Contacts Management. All 13 tests passed (100% success rate). Tested 4 new/updated endpoints: (1) GET /api/contacts - returns seeded contacts 'Mom' and 'Rahul (Brother)' with all required fields. (2) POST /api/contacts - successfully creates new contacts with UUID id. (3) DELETE /api/contacts/{id} - deletes contacts and returns 404 for non-existent ids. (4) POST /api/sos UPDATED - now fetches trusted contacts from DB and returns recipients list with status 'sent' for each contact. All endpoints working correctly with proper MongoDB persistence. SMS delivery is SIMULATED (not real). Backend ready for production."
+  - agent: "testing"
+    message: "NEW SPATIAL ENDPOINT TESTING COMPLETE - GET /api/spatial/building-summary. All 5 tests passed (100% success rate). Tested new spatial endpoint with 3 comprehensive test scenarios: (1) Query with specific coordinates and user location - verified all response fields (name, building_type, levels, height_m, ward, address, distance_from_user_m, zone_status, nearest facilities). (2) Query near known incident location - confirmed zone_status correctly returns 'Caution' when within 250m of incident. (3) Determinism test - verified building_type and levels remain consistent across multiple calls with same coordinates. Health check confirmed previously working endpoints (POST /api/sos and GET /api/contacts) still functioning correctly. All nearest facility distances are valid non-negative integers. Endpoint is production-ready."
