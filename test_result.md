@@ -219,18 +219,30 @@ frontend:
       - working: "NA"
         agent: "testing"
         comment: "Frontend testing not performed as per instructions - testing agent only tests backend APIs."
+  
+  - task: "SOS Button Visibility on Mobile"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/emergency/SOSDistressTrigger.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "BUG FIX VERIFIED - SOS button visibility on mobile (390x844 viewport). All 6 tests PASSED: (1) Home screen: SOS button visible with aria-label 'Emergency SOS', bounding box x=306, y=648, w=68, h=68, positioned exactly at bottom-32 right-4 as expected, fully within viewport, not overlapping bottom nav. (2) Nearby tab: SOS button visible at same position. (3) Alerts tab: SOS button visible at same position. (4) Profile tab: SOS button visible at same position. (5) Functional test: Long-press (1.8s) → 3-second countdown with 'Sending SOS…' and 'Cancel — I'm safe' button → Crisis mode activated showing 'HIGH ALERT · SHIELD MODE' banner, 'RECORDING LIVE EVIDENCE', 'ALERTS SENT TO 3 TRUSTED CONTACTS & 112 DISPATCH', 'NEAREST POLICE: Ashok Nagar Police Station (755m)', live camera PiP with REC indicator, Call 112, Call Police, Share location, Discreet mode, and 'Safe now / Enter PIN to cancel' buttons. (6) Abort test: Long-press → countdown → cancel button clicked → successfully returned to normal state with SOS button visible. Bug fix confirmed working - SOS button is now clearly visible on all main tab screens with pulse ring animation, does not collide with bottom navigation."
 
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 4
-  run_ui: false
-  last_tested: "2026-10-07T18:16:45Z"
+  test_sequence: 5
+  run_ui: true
+  last_tested: "2026-10-07T18:48:30Z"
   backend_url: "https://deploy-check-110.preview.emergentagent.com/api"
 
 test_plan:
   current_focus:
-    - "UPDATED SOS endpoint with new fields tested and passing"
+    - "SOS button mobile visibility bug fix verified and working"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -244,3 +256,5 @@ agent_communication:
     message: "NEW SPATIAL ENDPOINT TESTING COMPLETE - GET /api/spatial/building-summary. All 5 tests passed (100% success rate). Tested new spatial endpoint with 3 comprehensive test scenarios: (1) Query with specific coordinates and user location - verified all response fields (name, building_type, levels, height_m, ward, address, distance_from_user_m, zone_status, nearest facilities). (2) Query near known incident location - confirmed zone_status correctly returns 'Caution' when within 250m of incident. (3) Determinism test - verified building_type and levels remain consistent across multiple calls with same coordinates. Health check confirmed previously working endpoints (POST /api/sos and GET /api/contacts) still functioning correctly. All nearest facility distances are valid non-negative integers. Endpoint is production-ready."
   - agent: "testing"
     message: "UPDATED SOS ENDPOINT TESTING COMPLETE - POST /api/sos with new fields. All 2 tests passed (100% success rate). Test 1 (Full body): Verified all new fields (battery, network, landmark, evidence_id) are properly stored and returned. nearest_police correctly calculated and returned 'Ashok Nagar Police Station' at 755m for coordinates (12.9718, 77.6071) as expected. All optional fields echoed back correctly (battery=64, network='4G', landmark='Brigade Road, Central Bengaluru'). Test 2 (Backward compatibility): Minimal body without optional fields returns 200 with recipients and nearest_police. Optional fields correctly return null when not provided. Endpoint maintains backward compatibility while supporting new features. Production-ready."
+  - agent: "testing"
+    message: "SOS BUTTON MOBILE BUG FIX VERIFICATION COMPLETE - All 6 tests PASSED (100% success rate). Tested on mobile viewport 390x844 as specified. (1) Home screen: SOS button with aria-label 'Emergency SOS' is VISIBLE and PRESENT with bounding box x=306, y=648, w=68, h=68 - positioned exactly at bottom-32 right-4 as expected, fully within viewport, not clipping off-screen, not overlapping bottom navigation. (2-4) Tab navigation: SOS button remains visible on Nearby, Alerts, and Profile tabs with consistent positioning. (5) Functional test: Long-press (1.8s) successfully triggers 3-second abort countdown showing 'Sending SOS…' with 'Cancel — I'm safe' button, countdown completes and transitions to HIGH ALERT SHIELD MODE crisis view showing status banner (RECORDING LIVE EVIDENCE, ALERTS SENT TO 3 TRUSTED CONTACTS & 112 DISPATCH, NEAREST POLICE Ashok Nagar Police Station 755m), live camera PiP with REC indicator, and action buttons (Call 112, Call Police, Share location, Discreet mode, Safe now/Enter PIN to cancel). (6) Abort test: Long-press → countdown → cancel button clicked during countdown → successfully returns to normal state with SOS button visible. BUG FIX CONFIRMED WORKING - The reported issue 'SOS option is not visible on phone' has been RESOLVED. The floating red SOS button with pulse ring is now clearly visible on all main tab screens at the correct position (bottom-32 right-4) and does not collide with bottom navigation."

@@ -45,13 +45,15 @@ const SOSDistressTrigger = () => {
       onTouchStart={begin}
       onTouchEnd={end}
       aria-label="Emergency SOS"
-      className="absolute bottom-24 right-4 z-30 h-16 w-16 rounded-full bg-[#DC2626] text-white flex flex-col items-center justify-center shadow-[0_12px_28px_-6px_rgba(220,38,38,0.65)] active:scale-95 transition-transform select-none"
+      className="absolute bottom-32 right-4 z-30 h-[68px] w-[68px] rounded-full bg-[#DC2626] text-white flex flex-col items-center justify-center shadow-[0_12px_28px_-6px_rgba(220,38,38,0.7)] active:scale-95 transition-transform select-none ring-4 ring-[#DC2626]/25"
     >
+      {/* gentle always-on pulse so the safety button is easy to spot */}
+      <span className="absolute inset-0 rounded-full bg-[#DC2626]/40 pulse-ring" />
       {pressing && (
-        <span className="absolute inset-0 rounded-full border-[3px] border-white/70 animate-ping" />
+        <span className="absolute inset-0 rounded-full border-[3px] border-white/80 animate-ping" />
       )}
-      <ShieldAlert className="h-6 w-6" strokeWidth={2.4} />
-      <span className="text-[10px] font-extrabold tracking-wide mt-0.5">SOS</span>
+      <ShieldAlert className="relative h-7 w-7" strokeWidth={2.4} />
+      <span className="relative text-[10px] font-extrabold tracking-wide mt-0.5">SOS</span>
     </button>
   );
 };
