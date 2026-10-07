@@ -114,6 +114,10 @@ class SosCreate(BaseModel):
     lng: Optional[float] = None
     accuracy: Optional[float] = None
     channel: Optional[str] = "sms"  # sms | whatsapp
+    battery: Optional[int] = None
+    network: Optional[str] = None
+    landmark: Optional[str] = None
+    evidence_id: Optional[str] = None
 
 
 class SosRecipient(BaseModel):
@@ -129,6 +133,10 @@ class SosResponse(BaseModel):
     channel: str
     recipients: List[SosRecipient]
     shared_at: datetime
+    nearest_police: Optional[dict] = None
+    battery: Optional[int] = None
+    network: Optional[str] = None
+    landmark: Optional[str] = None
 
 
 # ----------------- Routes -----------------
@@ -191,6 +199,30 @@ async def create_sos(payload: SosCreate):
     channel = payload.channel or "sms"
     recipients = [SosRecipient(name=c.name, phone=c.phone, status="sent") for c in contacts]
 
+    # Nearest police outpost from our spatial database
+    nearest_police = None
+    if payload.lat is not None and payload.lng is not None:
+        import math
+
+        def haversine_m(a_lat, a_lng, b_lat, b_lng):
+            R = 6371000.0
+            p1, p2 = math.radians(a_lat), math.radians(b_lat)
+            dphi = math.radians(b_lat - a_lat)
+            dl = math.radians(b_lng - a_lng)
+            h = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+            return 2 * R * math.asin(math.sqrt(h))
+
+        police = [
+            {"name": "Ashok Nagar Police Station", "lat": 12.9655, "lng": 77.6045, "phone": "100"},
+            {"name": "Cubbon Park Police Station", "lat": 12.9763, "lng": 77.5929, "phone": "100"},
+            {"name": "Indiranagar Police Station", "lat": 12.9719, "lng": 77.6412, "phone": "100"},
+            {"name": "Koramangala Police Station", "lat": 12.9352, "lng": 77.6245, "phone": "100"},
+        ]
+        for p in police:
+            d = round(haversine_m(payload.lat, payload.lng, p["lat"], p["lng"]))
+            if nearest_police is None or d < nearest_police["distance_m"]:
+                nearest_police = {"name": p["name"], "distance_m": d, "phone": p["phone"]}
+
     doc = {
         "id": sos_id,
         "lat": payload.lat,
@@ -200,6 +232,11 @@ async def create_sos(payload: SosCreate):
         "maps_link": maps_link,
         "message": message,
         "recipients": [r.dict() for r in recipients],
+        "battery": payload.battery,
+        "network": payload.network,
+        "landmark": payload.landmark,
+        "evidence_id": payload.evidence_id,
+        "nearest_police": nearest_police,
         "shared_at": datetime.now(timezone.utc),
     }
     await db.sos_events.insert_one(doc)
@@ -212,6 +249,10 @@ async def create_sos(payload: SosCreate):
         channel=channel,
         recipients=recipients,
         shared_at=doc["shared_at"],
+        nearest_police=nearest_police,
+        battery=payload.battery,
+        network=payload.network,
+        landmark=payload.landmark,
     )
 
 

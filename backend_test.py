@@ -932,17 +932,295 @@ def print_summary():
     
     return test_results["failed"] == 0
 
+def test_sos_updated_endpoint():
+    """Test UPDATED POST /api/sos with new fields: battery, network, landmark, evidence_id, nearest_police"""
+    print_test("POST /api/sos - UPDATED endpoint with new fields")
+    
+    # Test 1: Full body with all new fields
+    print_info("Test 1: POST /api/sos with full body (battery, network, landmark, evidence_id)")
+    try:
+        payload = {
+            "lat": 12.9718,
+            "lng": 77.6071,
+            "channel": "sms",
+            "battery": 64,
+            "network": "4G",
+            "landmark": "Brigade Road, Central Bengaluru",
+            "evidence_id": "ev-test-123"
+        }
+        response = requests.post(f"{BACKEND_URL}/sos", json=payload, timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        print_info(f"Response: {response.text}")
+        
+        if response.status_code != 200:
+            print_fail(f"Expected 200, got {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - returned {response.status_code}")
+            return False
+        
+        data = response.json()
+        
+        # Verify all required fields
+        required_fields = ["id", "maps_link", "message", "channel", "recipients", "shared_at", "nearest_police", "battery", "network", "landmark"]
+        missing_fields = [f for f in required_fields if f not in data]
+        
+        if missing_fields:
+            print_fail(f"Response missing fields: {missing_fields}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - missing fields: {missing_fields}")
+            return False
+        
+        print_pass("All required fields present in response")
+        
+        # Verify maps_link contains coordinates
+        maps_link = data["maps_link"]
+        if "12.9718" in maps_link and "77.6071" in maps_link and "google.com/maps" in maps_link:
+            print_pass(f"maps_link contains coordinates: {maps_link}")
+        else:
+            print_fail(f"maps_link doesn't contain expected coordinates: {maps_link}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - maps_link incorrect: {maps_link}")
+            return False
+        
+        # Verify message is non-empty and contains "SOS"
+        message = data["message"]
+        if message and "SOS" in message:
+            print_pass(f"message is non-empty and contains 'SOS': {message[:100]}...")
+        else:
+            print_fail(f"message doesn't meet requirements: {message}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - message invalid: {message}")
+            return False
+        
+        # Verify channel
+        if data["channel"] == "sms":
+            print_pass("channel is 'sms'")
+        else:
+            print_fail(f"Expected channel 'sms', got '{data['channel']}'")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - channel is '{data['channel']}' not 'sms'")
+            return False
+        
+        # Verify recipients is a non-empty list
+        recipients = data["recipients"]
+        if isinstance(recipients, list) and len(recipients) > 0:
+            print_pass(f"recipients is a non-empty list with {len(recipients)} entries")
+            
+            # Verify each recipient has name, phone, and status "sent"
+            for i, recipient in enumerate(recipients):
+                required_recipient_fields = ["name", "phone", "status"]
+                missing_recipient_fields = [f for f in required_recipient_fields if f not in recipient]
+                
+                if missing_recipient_fields:
+                    print_fail(f"Recipient {i} missing fields: {missing_recipient_fields}")
+                    test_results["failed"] += 1
+                    test_results["errors"].append(f"POST /api/sos (full body) - recipient {i} missing fields: {missing_recipient_fields}")
+                    return False
+                
+                if recipient["status"] != "sent":
+                    print_fail(f"Recipient {i} status is '{recipient['status']}', expected 'sent'")
+                    test_results["failed"] += 1
+                    test_results["errors"].append(f"POST /api/sos (full body) - recipient {i} status not 'sent'")
+                    return False
+            
+            print_pass(f"All recipients have name, phone, and status 'sent': {[r['name'] for r in recipients]}")
+        else:
+            print_fail("recipients is empty or not a list")
+            test_results["failed"] += 1
+            test_results["errors"].append("POST /api/sos (full body) - recipients is empty or not a list")
+            return False
+        
+        # Verify nearest_police object
+        nearest_police = data["nearest_police"]
+        if nearest_police is None:
+            print_fail("nearest_police is null (should be an object)")
+            test_results["failed"] += 1
+            test_results["errors"].append("POST /api/sos (full body) - nearest_police is null")
+            return False
+        
+        if not isinstance(nearest_police, dict):
+            print_fail(f"nearest_police should be dict, got {type(nearest_police)}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - nearest_police not dict")
+            return False
+        
+        # Verify nearest_police has name, distance_m, phone
+        required_police_fields = ["name", "distance_m", "phone"]
+        missing_police_fields = [f for f in required_police_fields if f not in nearest_police]
+        
+        if missing_police_fields:
+            print_fail(f"nearest_police missing fields: {missing_police_fields}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - nearest_police missing fields: {missing_police_fields}")
+            return False
+        
+        # Verify nearest_police.name is one of the expected stations
+        police_name = nearest_police["name"]
+        expected_stations = ["Ashok Nagar Police Station", "Cubbon Park Police Station"]
+        if police_name in expected_stations:
+            print_pass(f"nearest_police.name is one of expected stations: {police_name}")
+        else:
+            print_fail(f"nearest_police.name '{police_name}' not in {expected_stations}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - nearest_police.name unexpected: {police_name}")
+            return False
+        
+        # Verify distance_m is a reasonable positive integer
+        distance_m = nearest_police["distance_m"]
+        if isinstance(distance_m, int) and 100 <= distance_m <= 2000:
+            print_pass(f"nearest_police.distance_m is reasonable: {distance_m}m")
+        else:
+            print_fail(f"nearest_police.distance_m should be int between 100-2000m, got {distance_m} ({type(distance_m)})")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - nearest_police.distance_m invalid: {distance_m}")
+            return False
+        
+        # Verify phone
+        if nearest_police["phone"] == "100":
+            print_pass(f"nearest_police.phone is '100'")
+        else:
+            print_fail(f"nearest_police.phone should be '100', got '{nearest_police['phone']}'")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - nearest_police.phone not '100'")
+            return False
+        
+        # Verify optional fields are echoed back correctly
+        if data["battery"] == 64:
+            print_pass("battery echoed back correctly: 64")
+        else:
+            print_fail(f"battery should be 64, got {data['battery']}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - battery not echoed: {data['battery']}")
+            return False
+        
+        if data["network"] == "4G":
+            print_pass("network echoed back correctly: '4G'")
+        else:
+            print_fail(f"network should be '4G', got '{data['network']}'")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - network not echoed: {data['network']}")
+            return False
+        
+        if data["landmark"] == "Brigade Road, Central Bengaluru":
+            print_pass("landmark echoed back correctly")
+        else:
+            print_fail(f"landmark should be 'Brigade Road, Central Bengaluru', got '{data['landmark']}'")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (full body) - landmark not echoed: {data['landmark']}")
+            return False
+        
+        print_info(f"✓ Test 1 PASSED - Full body test successful")
+        print_info(f"  Nearest police: {police_name} at {distance_m}m")
+        test_results["passed"] += 1
+        
+    except Exception as e:
+        print_fail(f"Exception in test 1: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"POST /api/sos (full body) - Exception: {str(e)}")
+        return False
+    
+    # Test 2: Backward compatibility - minimal body without optional fields
+    print_info("\nTest 2: POST /api/sos with minimal body (backward compatibility)")
+    try:
+        payload = {
+            "lat": 12.95,
+            "lng": 77.62,
+            "channel": "sms"
+        }
+        response = requests.post(f"{BACKEND_URL}/sos", json=payload, timeout=10)
+        print_info(f"Status Code: {response.status_code}")
+        print_info(f"Response: {response.text}")
+        
+        if response.status_code != 200:
+            print_fail(f"Expected 200, got {response.status_code}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (minimal body) - returned {response.status_code}")
+            return False
+        
+        data = response.json()
+        
+        # Verify required fields are present
+        required_fields = ["id", "maps_link", "message", "channel", "recipients", "shared_at", "nearest_police"]
+        missing_fields = [f for f in required_fields if f not in data]
+        
+        if missing_fields:
+            print_fail(f"Response missing fields: {missing_fields}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (minimal body) - missing fields: {missing_fields}")
+            return False
+        
+        print_pass("All required fields present in response")
+        
+        # Verify recipients is still populated
+        recipients = data["recipients"]
+        if isinstance(recipients, list) and len(recipients) > 0:
+            print_pass(f"recipients is a non-empty list with {len(recipients)} entries")
+        else:
+            print_fail("recipients is empty or not a list")
+            test_results["failed"] += 1
+            test_results["errors"].append("POST /api/sos (minimal body) - recipients is empty or not a list")
+            return False
+        
+        # Verify nearest_police is still calculated
+        nearest_police = data["nearest_police"]
+        if nearest_police is not None and isinstance(nearest_police, dict):
+            if "name" in nearest_police and "distance_m" in nearest_police and "phone" in nearest_police:
+                print_pass(f"nearest_police is present: {nearest_police['name']} at {nearest_police['distance_m']}m")
+            else:
+                print_fail(f"nearest_police missing required fields: {nearest_police}")
+                test_results["failed"] += 1
+                test_results["errors"].append(f"POST /api/sos (minimal body) - nearest_police incomplete: {nearest_police}")
+                return False
+        else:
+            print_fail(f"nearest_police should be an object, got {nearest_police}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (minimal body) - nearest_police invalid: {nearest_police}")
+            return False
+        
+        # Verify optional fields are null when not provided
+        if data.get("battery") is None:
+            print_pass("battery is null (not provided)")
+        else:
+            print_fail(f"battery should be null, got {data.get('battery')}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (minimal body) - battery should be null: {data.get('battery')}")
+            return False
+        
+        if data.get("network") is None:
+            print_pass("network is null (not provided)")
+        else:
+            print_fail(f"network should be null, got {data.get('network')}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (minimal body) - network should be null: {data.get('network')}")
+            return False
+        
+        if data.get("landmark") is None:
+            print_pass("landmark is null (not provided)")
+        else:
+            print_fail(f"landmark should be null, got {data.get('landmark')}")
+            test_results["failed"] += 1
+            test_results["errors"].append(f"POST /api/sos (minimal body) - landmark should be null: {data.get('landmark')}")
+            return False
+        
+        print_info(f"✓ Test 2 PASSED - Backward compatibility confirmed")
+        print_info(f"  Nearest police: {nearest_police['name']} at {nearest_police['distance_m']}m")
+        test_results["passed"] += 1
+        return True
+        
+    except Exception as e:
+        print_fail(f"Exception in test 2: {str(e)}")
+        test_results["failed"] += 1
+        test_results["errors"].append(f"POST /api/sos (minimal body) - Exception: {str(e)}")
+        return False
+
 def main():
     print(f"\n{Colors.BLUE}{'='*80}{Colors.RESET}")
     print(f"{Colors.BLUE}Saathi Safety Backend API Test Suite{Colors.RESET}")
     print(f"{Colors.BLUE}Backend URL: {BACKEND_URL}{Colors.RESET}")
     print(f"{Colors.BLUE}{'='*80}{Colors.RESET}\n")
     
-    # Run new spatial endpoint tests
-    test_spatial_endpoint()
-    
-    # Run health check for previously working endpoints
-    test_health_check()
+    # Run UPDATED SOS endpoint tests
+    test_sos_updated_endpoint()
     
     # Print summary
     success = print_summary()

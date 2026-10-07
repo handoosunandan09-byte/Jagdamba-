@@ -13,6 +13,9 @@ import ProfileScreen from "./components/ProfileScreen";
 import SosScreen from "./components/SosScreen";
 import ContactsScreen from "./components/ContactsScreen";
 import GuardianScreen from "./components/GuardianScreen";
+import { EmergencyProvider } from "./context/EmergencyContext";
+import SOSDistressTrigger from "./components/emergency/SOSDistressTrigger";
+import EmergencyOverlay from "./components/emergency/EmergencyOverlay";
 
 // Heavy 3D module — loaded only when the user opens the Guardian City map
 const GuardianCityMap = lazy(() => import("./components/map/GuardianCityMap"));
@@ -67,34 +70,42 @@ function App() {
   };
 
   return (
-    <div className="App min-h-screen w-full flex items-center justify-center bg-[#EFE9E0] sm:py-6">
-      {/* Mobile frame */}
-      <div className="relative w-full sm:max-w-[440px] h-screen sm:h-[900px] sm:rounded-[2.2rem] sm:border sm:border-[#E4DCCF] overflow-hidden saathi-shell sm:shadow-[0_30px_80px_-30px_rgba(27,42,40,0.4)]">
-        <div className="flex flex-col h-full">
-          {showChrome && <Header />}
-          <main className={`flex-1 overflow-y-auto no-scrollbar ${showChrome ? "pb-24" : ""}`}>
-            {renderScreen()}
-          </main>
-        </div>
-        {showChrome && <BottomNav active={activeTab} onNavigate={(id) => navigate(id)} />}
-
-        {/* Guardian City 3D map — full-bleed overlay, lazily mounted */}
-        {screen === "guardianmap" && (
-          <div className="absolute inset-0 z-40">
-            <Suspense fallback={
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#EDEDE7]">
-                <div className="h-12 w-12 rounded-full border-4 border-[#0D9488]/30 border-t-[#0D9488] animate-spin mb-4" />
-                <p className="text-[14px] font-semibold text-[#334155]">Loading Guardian City engine…</p>
-              </div>
-            }>
-              <GuardianCityMap onBack={goHome} />
-            </Suspense>
+    <EmergencyProvider>
+      <div className="App min-h-screen w-full flex items-center justify-center bg-[#EFE9E0] sm:py-6">
+        {/* Mobile frame */}
+        <div className="relative w-full sm:max-w-[440px] h-screen sm:h-[900px] sm:rounded-[2.2rem] sm:border sm:border-[#E4DCCF] overflow-hidden saathi-shell sm:shadow-[0_30px_80px_-30px_rgba(27,42,40,0.4)]">
+          <div className="flex flex-col h-full">
+            {showChrome && <Header />}
+            <main className={`flex-1 overflow-y-auto no-scrollbar ${showChrome ? "pb-24" : ""}`}>
+              {renderScreen()}
+            </main>
           </div>
-        )}
+          {showChrome && <BottomNav active={activeTab} onNavigate={(id) => navigate(id)} />}
 
-        <Toaster position="top-center" richColors toastOptions={{ style: { borderRadius: "16px" } }} />
+          {/* Persistent one-touch emergency trigger (tab screens only) */}
+          {showChrome && <SOSDistressTrigger />}
+
+          {/* Guardian City 3D map — full-bleed overlay, lazily mounted */}
+          {screen === "guardianmap" && (
+            <div className="absolute inset-0 z-40">
+              <Suspense fallback={
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#EDEDE7]">
+                  <div className="h-12 w-12 rounded-full border-4 border-[#0D9488]/30 border-t-[#0D9488] animate-spin mb-4" />
+                  <p className="text-[14px] font-semibold text-[#334155]">Loading Guardian City engine…</p>
+                </div>
+              }>
+                <GuardianCityMap onBack={goHome} />
+              </Suspense>
+            </div>
+          )}
+
+          {/* Emergency crisis-mode overlay (highest priority) */}
+          <EmergencyOverlay />
+
+          <Toaster position="top-center" richColors toastOptions={{ style: { borderRadius: "16px" } }} />
+        </div>
       </div>
-    </div>
+    </EmergencyProvider>
   );
 }
 

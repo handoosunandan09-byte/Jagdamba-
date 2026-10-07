@@ -155,6 +155,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "POST /api/sos UPDATED to use trusted contacts from database. Tested with lat: 12.9352, lng: 77.6245, channel: 'sms'. Returns 200 with: maps_link containing coordinates, message with SOS text and maps_link, channel 'sms', recipients list with 2 entries (Mom and Rahul (Brother)), each with name, phone, and status 'sent'. All fields present: id, maps_link, message, channel, recipients, shared_at. Data persisted to MongoDB. NOTE: SMS delivery is SIMULATED for demo purposes."
+      - working: true
+        agent: "testing"
+        comment: "POST /api/sos UPDATED with new fields (battery, network, landmark, evidence_id, nearest_police). Test 1 (Full body): lat=12.9718, lng=77.6071, channel='sms', battery=64, network='4G', landmark='Brigade Road, Central Bengaluru', evidence_id='ev-test-123' - Returns 200 with all required fields. nearest_police correctly returns 'Ashok Nagar Police Station' at 755m with phone '100'. All optional fields (battery, network, landmark) echoed back correctly. recipients list has 3 contacts (Mom, Rahul (Brother), Ashlaash bhai) with status 'sent'. Test 2 (Backward compatibility): Minimal body with lat=12.95, lng=77.62, channel='sms' - Returns 200 with recipients and nearest_police ('Koramangala Police Station' at 1716m). Optional fields (battery, network, landmark) correctly return null when not provided. Both tests passed successfully. Endpoint is production-ready."
 
   - task: "Trusted Contacts - List"
     implemented: true
@@ -220,14 +223,14 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: false
-  last_tested: "2026-10-06T12:15:00Z"
+  last_tested: "2026-10-07T18:16:45Z"
   backend_url: "https://deploy-check-110.preview.emergentagent.com/api"
 
 test_plan:
   current_focus:
-    - "Spatial building summary endpoint tested and passing"
+    - "UPDATED SOS endpoint with new fields tested and passing"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -239,3 +242,5 @@ agent_communication:
     message: "NEW FEATURE TESTING COMPLETE - Trusted Contacts Management. All 13 tests passed (100% success rate). Tested 4 new/updated endpoints: (1) GET /api/contacts - returns seeded contacts 'Mom' and 'Rahul (Brother)' with all required fields. (2) POST /api/contacts - successfully creates new contacts with UUID id. (3) DELETE /api/contacts/{id} - deletes contacts and returns 404 for non-existent ids. (4) POST /api/sos UPDATED - now fetches trusted contacts from DB and returns recipients list with status 'sent' for each contact. All endpoints working correctly with proper MongoDB persistence. SMS delivery is SIMULATED (not real). Backend ready for production."
   - agent: "testing"
     message: "NEW SPATIAL ENDPOINT TESTING COMPLETE - GET /api/spatial/building-summary. All 5 tests passed (100% success rate). Tested new spatial endpoint with 3 comprehensive test scenarios: (1) Query with specific coordinates and user location - verified all response fields (name, building_type, levels, height_m, ward, address, distance_from_user_m, zone_status, nearest facilities). (2) Query near known incident location - confirmed zone_status correctly returns 'Caution' when within 250m of incident. (3) Determinism test - verified building_type and levels remain consistent across multiple calls with same coordinates. Health check confirmed previously working endpoints (POST /api/sos and GET /api/contacts) still functioning correctly. All nearest facility distances are valid non-negative integers. Endpoint is production-ready."
+  - agent: "testing"
+    message: "UPDATED SOS ENDPOINT TESTING COMPLETE - POST /api/sos with new fields. All 2 tests passed (100% success rate). Test 1 (Full body): Verified all new fields (battery, network, landmark, evidence_id) are properly stored and returned. nearest_police correctly calculated and returned 'Ashok Nagar Police Station' at 755m for coordinates (12.9718, 77.6071) as expected. All optional fields echoed back correctly (battery=64, network='4G', landmark='Brigade Road, Central Bengaluru'). Test 2 (Backward compatibility): Minimal body without optional fields returns 200 with recipients and nearest_police. Optional fields correctly return null when not provided. Endpoint maintains backward compatibility while supporting new features. Production-ready."
