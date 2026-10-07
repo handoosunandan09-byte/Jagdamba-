@@ -7,7 +7,7 @@ const HomeScreen = ({ onNavigate }) => {
     <div className="px-5 pb-6 float-up">
       <div className="mt-1 mb-4">
         <h2 className="text-[30px] leading-[1.12] font-extrabold tracking-tight text-[#2A2A22]">
-          How can <span className="text-[#2F6B4A]">Saathi</span><br />help you?
+          How can <span className="text-[#2F6B4A]">Jagdamba</span><br />help you?
         </h2>
         <p className="mt-2.5 text-[14px] text-[#6E6A5E] max-w-[300px]">
           Just tell us what happened and we&apos;ll find you the best help.
@@ -52,7 +52,7 @@ const HomeScreen = ({ onNavigate }) => {
             <span className="text-[24px] font-extrabold leading-[1.05] tracking-tight text-[#2E2E22] text-center">
               I NEED<br />HELP
             </span>
-            <span className="mt-1.5 text-[11.5px] font-medium text-[#8A8575]">Tap and tell Saathi</span>
+            <span className="mt-1.5 text-[11.5px] font-medium text-[#8A8575]">Tap and tell Jagdamba</span>
           </button>
         </div>
       </div>

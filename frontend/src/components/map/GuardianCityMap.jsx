@@ -1,4 +1,4 @@
-// Guardian City 3D spatial map (CesiumJS) for Saathi — Bengaluru.
+// Guardian City 3D spatial map (CesiumJS) for Jagdamba — Bengaluru.
 // Set the Cesium static asset base URL BEFORE importing Cesium.
 window.CESIUM_BASE_URL = "/cesium";
 

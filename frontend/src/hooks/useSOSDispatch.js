@@ -56,7 +56,7 @@ export const useSOSDispatch = () => {
       const link = lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : "https://www.google.com/maps";
       result = {
         maps_link: link,
-        message: `EMERGENCY: I need help. My live location is tracked via Saathi. ${link}`,
+        message: `EMERGENCY: I need help. My live location is tracked via Jagdamba. ${link}`,
         recipients: [],
         nearest_police: null,
         battery, network, landmark,
@@ -66,7 +66,7 @@ export const useSOSDispatch = () => {
 
     // Build an SMS URI the user can fire to their own contacts as a fallback channel
     const smsBody = encodeURIComponent(
-      `EMERGENCY: I need help. My live location is tracked via Saathi. ${result.maps_link} (Battery ${battery ?? "?"}%, ${network})`
+      `EMERGENCY: I need help. My live location is tracked via Jagdamba. ${result.maps_link} (Battery ${battery ?? "?"}%, ${network})`
     );
     result.smsUri = `sms:?&body=${smsBody}`;
     result.coords = coords ? { lat: coords.latitude, lng: coords.longitude } : null;

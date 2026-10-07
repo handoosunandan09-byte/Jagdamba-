@@ -1,4 +1,4 @@
-// Mock spatial intelligence data for Saathi Guardian City (Bengaluru).
+// Mock spatial intelligence data for Jagdamba Guardian City (Bengaluru).
 // Abstracted cityConfig so Mumbai / Delhi / Pune can be plugged in later.
 
 export const cityConfig = {

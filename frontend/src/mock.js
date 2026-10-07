@@ -1,4 +1,4 @@
-// Mock data for Saathi — AI Community Safety Assistant clone
+// Mock data for Jagdamba — AI Community Safety Assistant clone
 // NOTE: All data here is MOCKED for the frontend-only prototype.
 
 import {
@@ -16,7 +16,7 @@ export const currentUser = {
 export const quickActions = [
   {
     id: "talk",
-    title: "Talk to Saathi",
+    title: "Talk to Jagdamba",
     subtitle: "Voice or text conversation",
     icon: Mic,
     route: "talk",
@@ -75,8 +75,8 @@ export const issueCategories = [
   { value: "other", label: "Other" },
 ];
 
-// Simple canned conversation logic for Saathi assistant (mocked AI)
-export const saathiIntro = "Hi Priya, I'm Saathi — your community safety companion. Tell me what's happening and I'll guide you to the right help. If you're in immediate danger, tap the red button or call 100.";
+// Simple canned conversation logic for Jagdamba assistant (mocked AI)
+export const saathiIntro = "Hi Priya, I'm Jagdamba — your community safety companion. Tell me what's happening and I'll guide you to the right help. If you're in immediate danger, tap the red button or call 100.";
 
 export const saathiReplies = [
   {
@@ -97,7 +97,7 @@ export const saathiReplies = [
   },
 ];
 
-export const defaultSaathiReply = "I hear you. Could you share a few more details — where you are and what kind of help you need (safety, medical, legal, or civic)? Meanwhile, you can always tap the red button for immediate assistance.";
+export const defaultJagdambaReply = "I hear you. Could you share a few more details — where you are and what kind of help you need (safety, medical, legal, or civic)? Meanwhile, you can always tap the red button for immediate assistance.";
 
 export const navItems = [
   { id: "home", label: "Home", icon: HomeIcon },

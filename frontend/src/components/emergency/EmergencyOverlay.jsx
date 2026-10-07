@@ -74,7 +74,7 @@ const DiscreetScreen = ({ onExit }) => (
         </button>
       ))}
     </div>
-    <p className="absolute top-2 left-0 right-0 text-center text-[9px] text-white/25">Saathi recording quietly · tap AC to exit</p>
+    <p className="absolute top-2 left-0 right-0 text-center text-[9px] text-white/25">Jagdamba recording quietly · tap AC to exit</p>
   </div>
 );
 
@@ -120,7 +120,7 @@ const CrisisMode = () => {
   const shareNow = async () => {
     if (!r) return;
     if (navigator.share) {
-      try { await navigator.share({ title: "Saathi Emergency", text: r.message, url: r.maps_link }); return; } catch (e) { /* fall through */ }
+      try { await navigator.share({ title: "Jagdamba Emergency", text: r.message, url: r.maps_link }); return; } catch (e) { /* fall through */ }
     }
     if (r.smsUri) window.location.href = r.smsUri;
   };

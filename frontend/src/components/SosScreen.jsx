@@ -124,7 +124,7 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
 
             <div className="mt-6 space-y-3 pb-4">
               <button onClick={onTalk} className="w-full rounded-2xl bg-[#E5603C] text-white py-4 text-[15px] font-bold flex items-center justify-center gap-2 shadow-[0_12px_28px_-10px_rgba(229,96,60,0.6)] hover:bg-[#d9542f] transition-colors">
-                <MessageCircle className="h-5 w-5" /> Talk to Saathi now
+                <MessageCircle className="h-5 w-5" /> Talk to Jagdamba now
               </button>
               <button onClick={onCancel} className="w-full rounded-2xl bg-white border border-[#EFE7DB] text-[#1B2A28] py-3.5 text-[15px] font-semibold hover:bg-[#F3ECE1] transition-colors">
                 I&apos;m safe now

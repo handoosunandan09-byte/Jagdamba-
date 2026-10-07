@@ -33,7 +33,7 @@ const TalkScreen = ({ onBack, emergency }) => {
         ...m,
         { from: "saathi", text: "I'm having trouble connecting right now. If this is urgent, please call 100 (Police) or 108 (Ambulance)." },
       ]);
-      toast.error("Couldn't reach Saathi. Check your connection.");
+      toast.error("Couldn't reach Jagdamba. Check your connection.");
     } finally {
       setTyping(false);
     }
@@ -51,7 +51,7 @@ const TalkScreen = ({ onBack, emergency }) => {
 
   return (
     <div className="flex flex-col h-full">
-      <ScreenHeader title="Talk to Saathi" subtitle="Voice or text • private & secure" onBack={onBack} />
+      <ScreenHeader title="Talk to Jagdamba" subtitle="Voice or text • private & secure" onBack={onBack} />
       <div ref={scrollRef} className="flex-1 overflow-y-auto no-scrollbar px-4 py-3 space-y-3">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"} pop-in`}>
@@ -107,7 +107,7 @@ const TalkScreen = ({ onBack, emergency }) => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Tell Saathi what happened…"
+            placeholder="Tell Jagdamba what happened…"
             className="flex-1 bg-transparent outline-none text-[14px] text-[#1B2A28] placeholder:text-[#9AA7A3]"
           />
           <button

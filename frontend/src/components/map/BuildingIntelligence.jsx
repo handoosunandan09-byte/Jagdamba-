@@ -23,9 +23,9 @@ const BuildingIntelligence = ({ selected, onClose }) => {
 
   const share = () => {
     const coord = data ? data.address : (selected.lat && `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)}`);
-    const text = `Saathi coordinate: ${coord} — https://www.google.com/maps?q=${selected.lat},${selected.lng}`;
+    const text = `Jagdamba coordinate: ${coord} — https://www.google.com/maps?q=${selected.lat},${selected.lng}`;
     if (navigator.share) {
-      navigator.share({ title: "Saathi location", text }).catch(() => {});
+      navigator.share({ title: "Jagdamba location", text }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(text);
     }

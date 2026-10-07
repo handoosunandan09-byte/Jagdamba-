@@ -59,7 +59,7 @@ const ContactsScreen = ({ onBack }) => {
       <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-3 float-up">
         <div className="bg-[#E4EEE2] rounded-2xl p-4 mb-4">
           <p className="text-[13px] text-[#1C6B5D] leading-snug">
-            When you press <span className="font-bold">SOS</span>, Saathi shares your live location with everyone in this circle.
+            When you press <span className="font-bold">SOS</span>, Jagdamba shares your live location with everyone in this circle.
           </p>
         </div>
 

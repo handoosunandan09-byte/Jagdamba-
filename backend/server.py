@@ -29,9 +29,9 @@ api_router = APIRouter(prefix="/api")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# ----------------- Saathi AI -----------------
+# ----------------- Jagdamba AI -----------------
 SAATHI_SYSTEM_PROMPT = (
-    "You are Saathi, an AI community safety companion for people in India. "
+    "You are Jagdamba, an AI community safety companion for people in India. "
     "Your role is to calmly guide users through unsafe, distressing, or civic situations. "
     "Always respond with warmth, empathy, and brevity (2-4 short sentences). "
     "Prioritise the user's immediate physical safety. "
@@ -142,7 +142,7 @@ class SosResponse(BaseModel):
 # ----------------- Routes -----------------
 @api_router.get("/")
 async def root():
-    return {"message": "Saathi API running"}
+    return {"message": "Jagdamba API running"}
 
 
 @api_router.post("/chat", response_model=ChatResponse)
@@ -162,7 +162,7 @@ async def chat(req: ChatRequest):
         return ChatResponse(reply=reply, session_id=req.session_id)
     except Exception as e:
         logger.exception("Chat error")
-        raise HTTPException(status_code=500, detail=f"Saathi is unavailable right now: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Jagdamba is unavailable right now: {str(e)}")
 
 
 @api_router.post("/reports", response_model=Report)

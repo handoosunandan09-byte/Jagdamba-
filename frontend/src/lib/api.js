@@ -33,7 +33,7 @@ export const deleteContact = async (id) => {
   return data;
 };
 
-// Get a stable per-browser session id for Saathi chat
+// Get a stable per-browser session id for Jagdamba chat
 export const getSessionId = () => {
   let id = localStorage.getItem("saathi_session");
   if (!id) {
