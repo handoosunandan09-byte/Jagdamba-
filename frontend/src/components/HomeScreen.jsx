@@ -1,11 +1,11 @@
 import React from "react";
 import { quickActions, emergencyContacts } from "../mock";
-import { Phone, Navigation, Radar, ChevronRight } from "lucide-react";
+import { Phone, Navigation, Radar, ChevronRight, Box } from "lucide-react";
 
 const HomeScreen = ({ onNavigate }) => {
   return (
     <div className="px-5 pb-6 float-up">
-      <div className="mt-1 mb-5">
+      <div className="mt-1 mb-4">
         <h2 className="text-[30px] leading-[1.12] font-extrabold tracking-tight text-[#2A2A22]">
           How can <span className="text-[#2F6B4A]">Saathi</span><br />help you?
         </h2>
@@ -13,6 +13,21 @@ const HomeScreen = ({ onNavigate }) => {
           Just tell us what happened and we&apos;ll find you the best help.
         </p>
       </div>
+
+      {/* Guardian City 3D map entry */}
+      <button
+        onClick={() => onNavigate("guardianmap")}
+        className="w-full mb-5 text-left rounded-2xl bg-[#0D9488] text-white p-4 flex items-center gap-3.5 shadow-[0_10px_24px_-10px_rgba(13,148,136,0.6)] hover:bg-[#0B827B] transition-colors"
+      >
+        <span className="h-11 w-11 shrink-0 rounded-full bg-white/20 flex items-center justify-center">
+          <Box className="h-5 w-5" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[15px] font-bold leading-tight">Guardian City · 3D Map</p>
+          <p className="text-[12px] text-white/85 mt-0.5 leading-snug">Explore the live 3D safety map of Bengaluru</p>
+        </div>
+        <ChevronRight className="h-5 w-5 shrink-0" />
+      </button>
 
       {/* Map card with the help button */}
       <div className="relative rounded-[26px] map-card border border-[#DED6C2] overflow-hidden shadow-[0_8px_24px_-12px_rgba(42,42,34,0.25)]">
