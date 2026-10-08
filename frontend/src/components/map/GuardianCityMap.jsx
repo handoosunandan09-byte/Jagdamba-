@@ -44,7 +44,10 @@ const GuardianCityMap = ({ onBack }) => {
 
     const init = async () => {
       try {
-        if (ION_TOKEN) Cesium.Ion.defaultAccessToken = ION_TOKEN;
+        // Always set the ion token explicitly. Setting it (or "" when absent)
+        // prevents Cesium from using its built-in demo token, which is what
+        // triggers the "default ion access token / API key required" panel.
+        Cesium.Ion.defaultAccessToken = ION_TOKEN || "";
 
         viewer = new Cesium.Viewer(containerRef.current, {
           animation: false,
@@ -57,6 +60,7 @@ const GuardianCityMap = ({ onBack }) => {
           fullscreenButton: false,
           infoBox: false,
           selectionIndicator: false,
+          showRenderLoopErrors: false, // never show Cesium's red error panel to users
           creditContainer: document.createElement("div"),
           baseLayer: Cesium.ImageryLayer.fromProviderAsync(
             Promise.resolve(new Cesium.UrlTemplateImageryProvider({
@@ -105,6 +109,8 @@ const GuardianCityMap = ({ onBack }) => {
               },
             });
             viewer.scene.primitives.add(osm);
+            // Swallow any per-tile load failures so no error surfaces to the user
+            try { osm.tileFailed.addEventListener(() => {}); } catch (e) { /* noop */ }
           } catch (e) { /* fall back to mock blocks */ }
         }
 

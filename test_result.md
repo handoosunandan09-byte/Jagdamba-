@@ -231,18 +231,30 @@ frontend:
       - working: true
         agent: "testing"
         comment: "BUG FIX VERIFIED - SOS button visibility on mobile (390x844 viewport). All 6 tests PASSED: (1) Home screen: SOS button visible with aria-label 'Emergency SOS', bounding box x=306, y=648, w=68, h=68, positioned exactly at bottom-32 right-4 as expected, fully within viewport, not overlapping bottom nav. (2) Nearby tab: SOS button visible at same position. (3) Alerts tab: SOS button visible at same position. (4) Profile tab: SOS button visible at same position. (5) Functional test: Long-press (1.8s) → 3-second countdown with 'Sending SOS…' and 'Cancel — I'm safe' button → Crisis mode activated showing 'HIGH ALERT · SHIELD MODE' banner, 'RECORDING LIVE EVIDENCE', 'ALERTS SENT TO 3 TRUSTED CONTACTS & 112 DISPATCH', 'NEAREST POLICE: Ashok Nagar Police Station (755m)', live camera PiP with REC indicator, Call 112, Call Police, Share location, Discreet mode, and 'Safe now / Enter PIN to cancel' buttons. (6) Abort test: Long-press → countdown → cancel button clicked → successfully returned to normal state with SOS button visible. Bug fix confirmed working - SOS button is now clearly visible on all main tab screens with pulse ring animation, does not collide with bottom navigation."
+  
+  - task: "3D Map Cesium API Key Error Fix"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/map/GuardianCityMap.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "BUG FIX VERIFIED - 3D map Cesium API key error panel removed (mobile 390x844 viewport). All 5 test steps PASSED: (1) Home screen loaded, tapped 'Guardian City · 3D Map' teal banner → map opened successfully after 10-20s loading. (2) Map load verification (critical): NO error panels found - 'API key required': 0 occurrences, 'default ion access token': 0 occurrences, 'error occurred while rendering': 0 occurrences, 'An error occurred': 0 occurrences. WebGL canvas element VISIBLE with correct dimensions (390x844). Top bar correctly shows 'Guardian City · Bengaluru'. 'Enter Guardian Mode' button VISIBLE at bottom. (3) Tapped Layers icon (top-right) → legend panel appeared with all expected items: Hospital (blue), Police (teal), 24x7 Pharmacy (amber), Active Alert (red), You (teal), and Guardian radius buttons (300m, 500m, 1km) all functional. (4) Tapped map center → Building Intelligence bottom sheet appeared with complete data: Type: Institutional, Levels: 16 floors / 51.2m, Distance: 841m, Zone status: Normal, Nearest emergency infrastructure: St. Philomena's Hospital (1047m), Cubbon Park Police Station (822m), MedPlus 24x7 (677m). (5) Tapped 'Enter Guardian Mode' → HUD appeared with 'Auto-alert in 00:50' countdown timer, 'I'm safe — reset timer' button, route options (Safest well-lit 14min 4.2km, Fastest 10min 3.6km), and Police response 240m indicator. Bug fix SUCCESSFUL - Cesium viewer hardened with showRenderLoopErrors: false and explicit Ion token handling (line 50: Cesium.Ion.defaultAccessToken = ION_TOKEN || '') prevents all error panels. Map renders fully functional 3D city view with OSM Buildings, POI markers, and spatial intelligence features."
 
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 5
+  test_sequence: 6
   run_ui: true
-  last_tested: "2026-10-07T18:48:30Z"
+  last_tested: "2026-10-08T07:34:21Z"
   backend_url: "https://deploy-check-110.preview.emergentagent.com/api"
 
 test_plan:
   current_focus:
-    - "SOS button mobile visibility bug fix verified and working"
+    - "3D Map Cesium API key error fix verified and working"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -258,3 +270,5 @@ agent_communication:
     message: "UPDATED SOS ENDPOINT TESTING COMPLETE - POST /api/sos with new fields. All 2 tests passed (100% success rate). Test 1 (Full body): Verified all new fields (battery, network, landmark, evidence_id) are properly stored and returned. nearest_police correctly calculated and returned 'Ashok Nagar Police Station' at 755m for coordinates (12.9718, 77.6071) as expected. All optional fields echoed back correctly (battery=64, network='4G', landmark='Brigade Road, Central Bengaluru'). Test 2 (Backward compatibility): Minimal body without optional fields returns 200 with recipients and nearest_police. Optional fields correctly return null when not provided. Endpoint maintains backward compatibility while supporting new features. Production-ready."
   - agent: "testing"
     message: "SOS BUTTON MOBILE BUG FIX VERIFICATION COMPLETE - All 6 tests PASSED (100% success rate). Tested on mobile viewport 390x844 as specified. (1) Home screen: SOS button with aria-label 'Emergency SOS' is VISIBLE and PRESENT with bounding box x=306, y=648, w=68, h=68 - positioned exactly at bottom-32 right-4 as expected, fully within viewport, not clipping off-screen, not overlapping bottom navigation. (2-4) Tab navigation: SOS button remains visible on Nearby, Alerts, and Profile tabs with consistent positioning. (5) Functional test: Long-press (1.8s) successfully triggers 3-second abort countdown showing 'Sending SOS…' with 'Cancel — I'm safe' button, countdown completes and transitions to HIGH ALERT SHIELD MODE crisis view showing status banner (RECORDING LIVE EVIDENCE, ALERTS SENT TO 3 TRUSTED CONTACTS & 112 DISPATCH, NEAREST POLICE Ashok Nagar Police Station 755m), live camera PiP with REC indicator, and action buttons (Call 112, Call Police, Share location, Discreet mode, Safe now/Enter PIN to cancel). (6) Abort test: Long-press → countdown → cancel button clicked during countdown → successfully returns to normal state with SOS button visible. BUG FIX CONFIRMED WORKING - The reported issue 'SOS option is not visible on phone' has been RESOLVED. The floating red SOS button with pulse ring is now clearly visible on all main tab screens at the correct position (bottom-32 right-4) and does not collide with bottom navigation."
+  - agent: "testing"
+    message: "3D MAP CESIUM API KEY ERROR BUG FIX VERIFICATION COMPLETE - All 5 test steps PASSED (100% success rate). Tested on mobile viewport 390x844 as specified in review request. CRITICAL VERIFICATION (Step 2): NO error panels or overlays found containing 'API key required' (0 occurrences), 'default ion access token' (0 occurrences), 'error occurred while rendering' (0 occurrences), or 'An error occurred' (0 occurrences). WebGL canvas element is PRESENT and VISIBLE inside map container with correct dimensions (390x844). Top bar correctly displays 'Guardian City · Bengaluru'. 'Enter Guardian Mode' button is VISIBLE at bottom. Step 3: Layers icon (top-right) functional - legend panel shows all POI types (Hospital, Police, 24x7 Pharmacy, Active Alert, You) and Guardian radius buttons (300m, 500m, 1km) all working. Step 4: Map click interaction working - Building Intelligence bottom sheet appears with complete spatial data (building type, levels/height, distance, zone status, nearest hospital/police/pharmacy with distances). Step 5: Guardian Mode activation working - HUD appears with auto-alert countdown timer starting at ~01:00, 'I'm safe — reset timer' button, route options, and police response distance. BUG FIX CONFIRMED SUCCESSFUL - The reported issue '3D map shows API key required error' has been RESOLVED. The Cesium viewer is hardened with showRenderLoopErrors: false (line 63) and explicit Ion token handling Cesium.Ion.defaultAccessToken = ION_TOKEN || '' (line 50) which prevents the error/API-key panel from ever appearing. The map renders a fully functional 3D city view with OSM Buildings tileset, POI markers, spatial intelligence, and all interactive features working correctly."
