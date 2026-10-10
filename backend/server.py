@@ -10,7 +10,17 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+import httpx
+
+try:  # Emergent's private SDK (only available on Emergent's servers)
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    HAS_EMERGENT = True
+except ImportError:  # running elsewhere (Render, local, etc.)
+    HAS_EMERGENT = False
+
+    class UserMessage:  # minimal stand-in
+        def __init__(self, text: str):
+            self.text = text
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -48,13 +58,50 @@ SAATHI_SYSTEM_PROMPT = (
 _chat_sessions: dict = {}
 
 
-def get_chat(session_id: str) -> LlmChat:
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-flash-latest')
+
+OFFLINE_REPLY = (
+    "I'm here with you. If you feel unsafe, move to a well-lit, crowded place right now. "
+    "Call Police 100, Ambulance 108 or Women Helpline 1091, and use the SOS button to alert a trusted contact."
+)
+
+
+class GeminiChat:
+    """Direct Google Gemini chat with per-session history (no Emergent SDK needed)."""
+
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self.history: list = []
+
+    async def send_message(self, msg: "UserMessage") -> str:
+        if not GEMINI_API_KEY:
+            return OFFLINE_REPLY
+        self.history.append({"role": "user", "parts": [{"text": msg.text}]})
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+        body = {
+            "system_instruction": {"parts": [{"text": SAATHI_SYSTEM_PROMPT}]},
+            "contents": self.history[-20:],
+        }
+        async with httpx.AsyncClient(timeout=30) as http:
+            r = await http.post(url, params={"key": GEMINI_API_KEY}, json=body)
+            r.raise_for_status()
+            data = r.json()
+        reply = "".join(p.get("text", "") for p in data["candidates"][0]["content"]["parts"]).strip()
+        self.history.append({"role": "model", "parts": [{"text": reply}]})
+        return reply or OFFLINE_REPLY
+
+
+def get_chat(session_id: str):
     if session_id not in _chat_sessions:
-        _chat_sessions[session_id] = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=session_id,
-            system_message=SAATHI_SYSTEM_PROMPT,
-        ).with_model("gemini", "gemini-3.8-flash")
+        if HAS_EMERGENT and EMERGENT_LLM_KEY:
+            _chat_sessions[session_id] = LlmChat(
+                api_key=EMERGENT_LLM_KEY,
+                session_id=session_id,
+                system_message=SAATHI_SYSTEM_PROMPT,
+            ).with_model("gemini", "gemini-3.8-flash")
+        else:
+            _chat_sessions[session_id] = GeminiChat(session_id)
     return _chat_sessions[session_id]
 
 
