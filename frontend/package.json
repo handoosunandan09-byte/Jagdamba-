@@ -68,40 +68,6 @@
     "test": "craco test"
   },
   "resolutions": {
-    "@zip.js/zip.js": "2.7.45"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "devDependencies": {
-    "@babel/plugin-proposal-private-property-in-object": "7.21.11",
-    "@craco/craco": "7.1.0",
-    "@emergentbase/overlay": "https://assets.emergent.sh/npm/emergentbase-overlay-0.1.31.tgz",
-    "@emergentbase/visual-edits": "https://assets.emergent.sh/npm/emergentbase-visual-edits-1.0.13.tgz",
-    "@eslint/js": "9.23.0",
-    "@types/lodash": "4.17.24",
-    "autoprefixer": "10.4.20",
-    "copy-webpack-plugin": "11.0.0",
-    "dotenv": "16.4.5",
-    "eslint": "9.23.0",
-    "eslint-plugin-import": "2.31.0",
-    "eslint-plugin-jsx-a11y": "6.10.2",
-    "eslint-plugin-react": "7.37.4",
-    "eslint-plugin-react-hooks": "5.2.0",
-    "globals": "15.15.0",
-    "postcss": "8.5.28",
-    "tailwindcss": "3.4.17"
-  },
-  "resolutions": {
     "react-router": "7.18.4",
     "node-forge": "1.4.0",
     "fast-uri": "3.1.8",
@@ -143,7 +109,41 @@
     "**/readdirp/picomatch": "2.3.2",
     "**/jest-util/picomatch": "2.3.2",
     "**/tinyglobby/picomatch": "4.0.4",
-    "http-proxy-middleware": "2.0.10"
+    "http-proxy-middleware": "2.0.10",
+    "@zip.js/zip.js": "2.7.45"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "7.21.11",
+    "@craco/craco": "7.1.0",
+    "@eslint/js": "9.23.0",
+    "@types/lodash": "4.17.24",
+    "ajv": "^8.17.1",
+    "autoprefixer": "10.4.20",
+    "copy-webpack-plugin": "11.0.0",
+    "dotenv": "16.4.5",
+    "eslint": "9.23.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react": "7.37.4",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "globals": "15.15.0",
+    "postcss": "8.5.28",
+    "tailwindcss": "3.4.17"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
+  "overrides": {
+    "@zip.js/zip.js": "2.7.45"
+  }
 }
