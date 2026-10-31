@@ -4,7 +4,7 @@
   publish = "build"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
   CI = "false"
 
 # Send every route to the React app (fixes 404 on refresh)
