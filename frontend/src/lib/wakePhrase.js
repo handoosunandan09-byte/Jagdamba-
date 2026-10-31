@@ -17,3 +17,11 @@ export const isWakePhrase = (text) => {
   const t = normalise(text);
   return NAME.test(t) && HELP.test(t);
 };
+
+// Just the name ("Jagdamba") — wakes the assistant orb.
+export const hasName = (text) => NAME.test(normalise(text));
+// A help word on its own — counts as SOS only while the orb is awake.
+export const hasHelp = (text) => HELP.test(normalise(text));
+// Ways to tell the orb nothing is wrong.
+const DISMISS = /\b(cancel|stop|nothing|never ?mind|i\s?a?m (ok|okay|fine|safe)|all good)\b|कुछ नहीं|ठीक/i;
+export const isDismiss = (text) => DISMISS.test(normalise(text));
