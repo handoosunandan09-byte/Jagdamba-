@@ -80,6 +80,20 @@ export const buildSmsUri = (phones, body) => {
   return `sms:${to}?&body=${encodeURIComponent(body)}`;
 };
 
+// WhatsApp click-to-chat link with the message pre-filled.
+// Numbers saved without a country code are treated as Indian (+91).
+export const toWhatsAppNumber = (phone) => {
+  let d = String(phone || "").replace(/[^\d+]/g, "");
+  if (d.startsWith("+")) return d.slice(1);
+  if (d.startsWith("00")) return d.slice(2);
+  d = d.replace(/^0+/, "");
+  return d.length === 10 ? `91${d}` : d;
+};
+export const whatsappUrl = (phone, text) => {
+  const n = toWhatsAppNumber(phone);
+  return `https://wa.me/${n}?text=${encodeURIComponent(text || "")}`;
+};
+
 export const directionsUrl = (lat, lng) =>
   `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
 
