@@ -141,7 +141,7 @@ const CrisisMode = () => {
             {recording ? "RECORDING LIVE EVIDENCE" : "EVIDENCE CAPTURE STARTING…"}
           </p>
           <p className="flex items-center gap-2">
-            🚨 {dispatching ? "SENDING ALERTS…" : sentCount > 0 ? `TEXT SENT TO ${sentCount} OF ${recipientCount} TRUSTED CONTACT${recipientCount !== 1 ? "S" : ""}` : "TAP WHATSAPP BELOW TO ALERT YOUR CONTACTS"}
+            🚨 {dispatching ? "SENDING ALERTS…" : sentCount > 0 ? `ALERT SENT TO ${sentCount} OF ${recipientCount} TRUSTED CONTACT${recipientCount !== 1 ? "S" : ""}` : "TAP WHATSAPP BELOW TO ALERT YOUR CONTACTS"}
           </p>
           {police && (
             <p className="flex items-center gap-2">
