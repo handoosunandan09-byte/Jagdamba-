@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { shareSos } from "../lib/api";
+import { shareSos, buildSmsUri } from "../lib/api";
 
 // Builds the emergency payload and dispatches it. Fails gracefully — location/SMS
 // still fire even if media recording failed.
@@ -32,11 +32,10 @@ export const useSOSDispatch = () => {
     return navigator.onLine ? "ONLINE" : "OFFLINE";
   };
 
-  const dispatch = useCallback(async ({ evidenceId } = {}) => {
+  const dispatch = useCallback(async ({ evidenceId, reason = "sos" } = {}) => {
     const coords = await getPosition();
     const battery = await getBattery();
     const network = getNetwork();
-    const landmark = "Brigade Road, Central Bengaluru"; // snapped against nearest landmark (mocked)
 
     let result = null;
     try {
@@ -47,8 +46,8 @@ export const useSOSDispatch = () => {
         channel: "sms",
         battery,
         network,
-        landmark,
         evidence_id: evidenceId || null,
+        reason,
       });
     } catch (e) {
       // Even if backend fails, keep a local payload so the UI + SMS can still work
@@ -59,20 +58,17 @@ export const useSOSDispatch = () => {
         message: `EMERGENCY: I need help. My live location is tracked via Jagdamba. ${link}`,
         recipients: [],
         nearest_police: null,
-        battery, network, landmark,
+        battery, network, landmark: null,
         offline: true,
       };
     }
 
-    // Build an SMS URI the user can fire to their own contacts as a fallback channel
-    const smsBody = encodeURIComponent(
-      `EMERGENCY: I need help. My live location is tracked via Jagdamba. ${result.maps_link} (Battery ${battery ?? "?"}%, ${network})`
-    );
-    result.smsUri = `sms:?&body=${smsBody}`;
+    // SMS link the user can fire from their own phone (fallback channel)
+    const pendingPhones = (result.recipients || []).filter((r) => r.status !== "sent").map((r) => r.phone);
+    result.smsUri = buildSmsUri(pendingPhones, result.message);
     result.coords = coords ? { lat: coords.latitude, lng: coords.longitude } : null;
     result.battery = battery;
     result.network = network;
-    result.landmark = landmark;
     return result;
   }, []);
 
