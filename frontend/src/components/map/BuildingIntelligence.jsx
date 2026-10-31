@@ -2,8 +2,8 @@ import React from "react";
 import { X, MapPin, Building2, Hospital, Shield, Pill, Navigation, Share2, Loader2, TriangleAlert, Activity } from "lucide-react";
 
 const zoneStyle = {
-  Normal: { chip: "bg-[#DCFCE7] text-[#15803D]", label: "Normal" },
-  "High Footfall": { chip: "bg-[#DBEAFE] text-[#1D4ED8]", label: "High Footfall" },
+  "No Reports": { chip: "bg-[#DCFCE7] text-[#15803D]", label: "No recent reports" },
+  "Reported Issues": { chip: "bg-[#FEF3C7] text-[#B45309]", label: "Civic issues reported" },
   Caution: { chip: "bg-[#FEE2E2] text-[#B91C1C]", label: "Caution" },
 };
 
@@ -17,12 +17,16 @@ const metRow = (Icon, label, value, color) => (
   </div>
 );
 
-const BuildingIntelligence = ({ selected, onClose }) => {
+const BuildingIntelligence = ({ selected, onClose, onRouteHere, canRoute }) => {
   const { loading, data, poi, error } = selected;
-  const title = poi ? poi.name : "Building Intelligence";
+  const title = poi ? poi.name : (data?.name || "Building Intelligence");
+  const near = (n) => (n ? [n.name, `${n.distance_m} m`] : ["None found within 3 km", "—"]);
+  const floors = data && (data.levels || data.height_m)
+    ? [data.levels && `${data.levels} floors`, data.height_m && `${data.height_m} m`].filter(Boolean).join(" · ")
+    : "Not mapped";
 
   const share = () => {
-    const coord = data ? data.address : (selected.lat && `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)}`);
+    const coord = selected.lat != null ? `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)}` : "";
     const text = `Jagdamba coordinate: ${coord} — https://www.google.com/maps?q=${selected.lat},${selected.lng}`;
     if (navigator.share) {
       navigator.share({ title: "Jagdamba location", text }).catch(() => {});
@@ -31,7 +35,7 @@ const BuildingIntelligence = ({ selected, onClose }) => {
     }
   };
 
-  const zone = data && zoneStyle[data.zone_status] ? zoneStyle[data.zone_status] : zoneStyle.Normal;
+  const zone = data && zoneStyle[data.zone_status] ? zoneStyle[data.zone_status] : zoneStyle["No Reports"];
 
   return (
     <div className="absolute inset-x-0 bottom-0 z-20">
@@ -67,25 +71,26 @@ const BuildingIntelligence = ({ selected, onClose }) => {
               <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${zone.chip}`}>
                 {data.zone_status === "Caution" ? <TriangleAlert className="h-3 w-3" /> : <Activity className="h-3 w-3" />} {zone.label}
               </span>
-              <span className="text-[11px] text-[#64748B] flex items-center gap-1"><MapPin className="h-3 w-3" /> {data.ward}</span>
+              {data.ward && <span className="text-[11px] text-[#64748B] flex items-center gap-1"><MapPin className="h-3 w-3" /> {data.ward}</span>}
             </div>
 
             <div className="divide-y divide-[#F1F5F9] mt-2">
-              {metRow(Building2, "Type", data.building_type, "#0D9488")}
-              {metRow(Activity, "Levels / height", `${data.levels} floors · ${data.height_m} m`, "#7C3AED")}
-              {metRow(Navigation, "Distance from you", `${data.distance_from_user_m} m`, "#0EA5E9")}
+              {metRow(Building2, "Type", data.building_type || "Not mapped", "#0D9488")}
+              {metRow(Activity, "Levels / height", floors, "#7C3AED")}
+              {data.distance_from_user_m != null && metRow(Navigation, "Distance from you", `${data.distance_from_user_m} m`, "#0EA5E9")}
             </div>
 
             <p className="text-[12px] font-bold text-[#64748B] uppercase tracking-wide mt-4 mb-1">Nearest emergency infrastructure</p>
             <div className="divide-y divide-[#F1F5F9]">
-              {metRow(Hospital, data.nearest.hospital.name, `${data.nearest.hospital.distance_m} m`, "#2563EB")}
-              {metRow(Shield, data.nearest.police.name, `${data.nearest.police.distance_m} m`, "#0D9488")}
-              {metRow(Pill, data.nearest.pharmacy.name, `${data.nearest.pharmacy.distance_m} m`, "#F59E0B")}
+              {metRow(Hospital, ...near(data.nearest.hospital), "#2563EB")}
+              {metRow(Shield, ...near(data.nearest.police), "#0D9488")}
+              {metRow(Pill, ...near(data.nearest.pharmacy), "#F59E0B")}
             </div>
+            <p className="text-[10.5px] text-[#94A3B8] mt-2">{data.incident_count ? `${data.incident_count} community report(s) within 300 m in the last 30 days · ` : ""}Map data © OpenStreetMap contributors</p>
 
             <div className="flex gap-3 mt-5">
-              <button className="flex-1 rounded-xl bg-[#0D9488] text-white py-3 text-[14px] font-bold flex items-center justify-center gap-2 hover:bg-[#0B827B] transition-colors">
-                <Navigation className="h-4 w-4" /> Route past here
+              <button disabled={!canRoute} onClick={() => onRouteHere?.({ lat: selected.lat, lng: selected.lng })} className="flex-1 rounded-xl bg-[#0D9488] text-white py-3 text-[14px] font-bold flex items-center justify-center gap-2 hover:bg-[#0B827B] disabled:opacity-50 transition-colors">
+                <Navigation className="h-4 w-4" /> Route here
               </button>
               <button onClick={share} className="flex-1 rounded-xl bg-[#F1F5F9] text-[#334155] py-3 text-[14px] font-bold flex items-center justify-center gap-2 hover:bg-[#E2E8F0] transition-colors">
                 <Share2 className="h-4 w-4" /> Share coordinate

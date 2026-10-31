@@ -1,19 +1,21 @@
-// Guardian City 3D spatial map (CesiumJS) for Jagdamba — Bengaluru.
+// Guardian City 3D spatial map (CesiumJS) for Jagdamba — centred on the user's live location.
 // Set the Cesium static asset base URL BEFORE importing Cesium.
 window.CESIUM_BASE_URL = "/cesium";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
-import {
-  cityConfig, pois, poiStyles, safeRoutes, userPosition, guardianRadiusOptions,
-} from "../../mapData";
+import { poiStyles, guardianRadiusOptions } from "../../config";
+import { useUser } from "../../context/UserContext";
+import { getNearby, getAlerts, getBuildingSummary, getSafeRoutes } from "../../lib/api";
 import BuildingIntelligence from "./BuildingIntelligence";
 import GuardianHUD from "./GuardianHUD";
 import { ChevronLeft, ShieldCheck, Layers, Navigation2 } from "lucide-react";
 
 const ION_TOKEN = process.env.REACT_APP_CESIUM_ION_TOKEN;
-const GROUND_M = 900; // approx Bengaluru terrain elevation (MSL) for camera framing
+const GROUND_M = 0; // camera altitude offset (terrain is ellipsoid unless an ion token is set)
+const CAMERA_ALT = 1500;
+const CAMERA_PITCH = -45;
 
 const typeGlyph = {
   hospital: "H",
@@ -23,6 +25,17 @@ const typeGlyph = {
 };
 
 const GuardianCityMap = ({ onBack }) => {
+  const { coords, place, locStatus, retryLocation } = useUser();
+  // Freeze the first GPS fix as the map centre; the user marker keeps tracking live.
+  const centerRef = useRef(null);
+  if (!centerRef.current && coords) centerRef.current = { lat: coords.lat, lng: coords.lng };
+  const userRef = useRef(coords);
+  userRef.current = coords;
+  const poiEntitiesRef = useRef([]);
+  const [pois, setPois] = useState([]);
+  const [destination, setDestination] = useState(null);
+  const [routes, setRoutes] = useState([]);
+  const [routeState, setRouteState] = useState("idle"); // idle | loading | ready | error
   const containerRef = useRef(null);
   const viewerRef = useRef(null);
   const userEntityRef = useRef(null);
@@ -111,27 +124,22 @@ const GuardianCityMap = ({ onBack }) => {
             viewer.scene.primitives.add(osm);
             // Swallow any per-tile load failures so no error surfaces to the user
             try { osm.tileFailed.addEventListener(() => {}); } catch (e) { /* noop */ }
-          } catch (e) { /* fall back to mock blocks */ }
+          } catch (e) { /* buildings unavailable — flat basemap only */ }
         }
 
         if (cancelled || viewer.isDestroyed()) return;
 
-        // Supplement with a few extruded mock blocks for 3D depth
-        addMockBuildings(viewer);
-
-        // Tilted civic overview of Bengaluru
+        // Tilted overview around the user
+        const c = centerRef.current;
         viewer.camera.setView({
-          destination: Cesium.Cartesian3.fromDegrees(
-            cityConfig.center.lng, cityConfig.center.lat - 0.012, GROUND_M + cityConfig.cameraAltitude
-          ),
+          destination: Cesium.Cartesian3.fromDegrees(c.lng, c.lat - 0.012, GROUND_M + CAMERA_ALT),
           orientation: {
             heading: Cesium.Math.toRadians(20),
-            pitch: Cesium.Math.toRadians(cityConfig.pitch),
+            pitch: Cesium.Math.toRadians(CAMERA_PITCH),
             roll: 0,
           },
         });
 
-        drawPois(viewer);
         drawUser(viewer);
         drawRadius(viewer, radius);
         setupPicking(viewer);
@@ -143,7 +151,7 @@ const GuardianCityMap = ({ onBack }) => {
       }
     };
 
-    init();
+    if (centerRef.current) init();
 
     return () => {
       cancelled = true;
@@ -155,44 +163,15 @@ const GuardianCityMap = ({ onBack }) => {
       viewerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [!!centerRef.current]);
 
   // ---- Helpers ----
-  const addMockBuildings = (viewer) => {
-    // light slate extruded boxes near the center for 3D depth (used with or without ion)
-    const base = cityConfig.center;
-    let s = 1;
-    for (let i = 0; i < 60; i++) {
-      s = (s * 9301 + 49297) % 233280;
-      const r = s / 233280;
-      const dLat = (r - 0.5) * 0.02;
-      const dLng = (((s * 7 + 13) % 233280) / 233280 - 0.5) * 0.02;
-      const h = 20 + ((s % 120));
-      const size = 0.0006 + (r * 0.0008);
-      viewer.entities.add({
-        polygon: {
-          hierarchy: Cesium.Cartesian3.fromDegreesArray([
-            base.lng + dLng - size, base.lat + dLat - size,
-            base.lng + dLng + size, base.lat + dLat - size,
-            base.lng + dLng + size, base.lat + dLat + size,
-            base.lng + dLng - size, base.lat + dLat + size,
-          ]),
-          extrudedHeight: h,
-          perPositionHeight: false,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          extrudedHeightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
-          material: Cesium.Color.fromCssColorString("#E2E8F0").withAlpha(0.95),
-          outline: true,
-          outlineColor: Cesium.Color.fromCssColorString("#C7D0DB"),
-        },
-      });
-    }
-  };
-
-  const drawPois = (viewer) => {
-    pois.forEach((p) => {
+  const drawPois = (viewer, list) => {
+    poiEntitiesRef.current.forEach((e) => viewer.entities.remove(e));
+    poiEntitiesRef.current = [];
+    list.forEach((p) => {
       const col = poiStyles[p.type].color;
-      viewer.entities.add({
+      const ent = viewer.entities.add({
         id: `poi-${p.id}`,
         position: Cesium.Cartesian3.fromDegrees(p.lng, p.lat),
         point: {
@@ -215,13 +194,14 @@ const GuardianCityMap = ({ onBack }) => {
         },
         properties: { poi: p },
       });
+      poiEntitiesRef.current.push(ent);
     });
   };
 
   const drawUser = (viewer) => {
     userEntityRef.current = viewer.entities.add({
       id: "user-pos",
-      position: Cesium.Cartesian3.fromDegrees(userPosition.lng, userPosition.lat),
+      position: Cesium.Cartesian3.fromDegrees(userRef.current.lng, userRef.current.lat),
       point: {
         pixelSize: 16,
         color: Cesium.Color.fromCssColorString("#0D9488"),
@@ -236,7 +216,7 @@ const GuardianCityMap = ({ onBack }) => {
   const drawRadius = (viewer, r) => {
     if (radiusEntityRef.current) viewer.entities.remove(radiusEntityRef.current);
     radiusEntityRef.current = viewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(userPosition.lng, userPosition.lat),
+      position: Cesium.Cartesian3.fromDegrees(userRef.current.lng, userRef.current.lat),
       ellipse: {
         semiMajorAxis: r,
         semiMinorAxis: r,
@@ -255,7 +235,8 @@ const GuardianCityMap = ({ onBack }) => {
 
   const drawRoute = (viewer, routeKey) => {
     clearRoutes(viewer);
-    const route = safeRoutes[routeKey];
+    const route = routes.find((r) => r.id === routeKey);
+    if (!route) return;
     const positions = route.path.flatMap((pt) => [pt.lng, pt.lat]);
     const line = viewer.entities.add({
       polyline: {
@@ -296,10 +277,8 @@ const GuardianCityMap = ({ onBack }) => {
   const fetchSummary = useCallback(async (lat, lng, poi) => {
     setSelected({ loading: true, poi });
     try {
-      const base = process.env.REACT_APP_BACKEND_URL;
-      const url = `${base}/api/spatial/building-summary?lat=${lat}&lng=${lng}&user_lat=${userPosition.lat}&user_lng=${userPosition.lng}`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const u = userRef.current;
+      const data = await getBuildingSummary({ lat, lng, ...(u ? { user_lat: u.lat, user_lng: u.lng } : {}) });
       setSelected({ loading: false, poi, data, lat, lng });
     } catch (e) {
       setSelected({ loading: false, poi, error: true, lat, lng });
@@ -314,21 +293,78 @@ const GuardianCityMap = ({ onBack }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radius, ready]);
 
+  // Live POIs (OpenStreetMap) + community-reported issues around the user
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || !ready) return;
+    const c = centerRef.current;
+    let cancelled = false;
+    Promise.allSettled([
+      getNearby({ lat: c.lat, lng: c.lng, radius: 3000, types: "police,hospital,pharmacy" }),
+      getAlerts({ lat: c.lat, lng: c.lng, radius: 3000, days: 30 }),
+    ]).then(([placesRes, alertsRes]) => {
+      if (cancelled || viewer.isDestroyed()) return;
+      const places = placesRes.status === "fulfilled" ? placesRes.value : [];
+      const incidents = alertsRes.status === "fulfilled"
+        ? alertsRes.value.map((a) => ({ id: `r-${a.id}`, type: "incident", name: a.title, lat: a.lat, lng: a.lng, ward: a.area }))
+        : [];
+      const list = [...places, ...incidents];
+      setPois(list);
+      drawPois(viewer, list);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
+  // Keep the user marker + guardian radius on the live GPS position
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || !ready || !coords || viewer.isDestroyed()) return;
+    if (userEntityRef.current) {
+      userEntityRef.current.position = Cesium.Cartesian3.fromDegrees(coords.lng, coords.lat);
+    }
+    drawRadius(viewer, radius);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coords?.lat, coords?.lng, ready]);
+
+  // Walking routes to the chosen destination, ranked by safety
+  const planRoute = useCallback(async (dest) => {
+    const from = userRef.current;
+    if (!from) return;
+    setDestination(dest);
+    setSelected(null);
+    setGuardian(true);
+    setRouteState("loading");
+    try {
+      const list = await getSafeRoutes({ from, to: dest });
+      setRoutes(list);
+      setActiveRoute(list[0]?.id || "A");
+      setRouteState("ready");
+    } catch (e) {
+      setRoutes([]);
+      setRouteState("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || !ready) return;
+    const u = userRef.current || centerRef.current;
+    const c = centerRef.current;
     if (guardian) {
-      drawRoute(viewer, activeRoute);
       viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(userPosition.lng, userPosition.lat - 0.004, GROUND_M + 350),
+        destination: Cesium.Cartesian3.fromDegrees(u.lng, u.lat - 0.004, GROUND_M + 350),
         orientation: { heading: Cesium.Math.toRadians(35), pitch: Cesium.Math.toRadians(-30), roll: 0 },
         duration: 2.2,
       });
     } else {
       clearRoutes(viewer);
+      setRoutes([]);
+      setDestination(null);
+      setRouteState("idle");
       viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(cityConfig.center.lng, cityConfig.center.lat - 0.012, GROUND_M + cityConfig.cameraAltitude),
-        orientation: { heading: Cesium.Math.toRadians(20), pitch: Cesium.Math.toRadians(cityConfig.pitch), roll: 0 },
+        destination: Cesium.Cartesian3.fromDegrees(c.lng, c.lat - 0.012, GROUND_M + CAMERA_ALT),
+        orientation: { heading: Cesium.Math.toRadians(20), pitch: Cesium.Math.toRadians(CAMERA_PITCH), roll: 0 },
         duration: 1.8,
       });
     }
@@ -340,7 +376,44 @@ const GuardianCityMap = ({ onBack }) => {
     if (!viewer || !ready || !guardian) return;
     drawRoute(viewer, activeRoute);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRoute]);
+  }, [activeRoute, routes]);
+
+  const nearestPolice = (() => {
+    const u = coords || centerRef.current;
+    if (!u) return null;
+    let best = null;
+    pois.filter((p) => p.type === "police").forEach((p) => {
+      const dLat = (p.lat - u.lat) * 111320;
+      const dLng = (p.lng - u.lng) * 111320 * Math.cos((u.lat * Math.PI) / 180);
+      const d = Math.sqrt(dLat * dLat + dLng * dLng);
+      if (!best || d < best.distance_m) best = { name: p.name, distance_m: Math.round(d) };
+    });
+    return best;
+  })();
+
+  const cityName = place?.city || place?.area || "Your area";
+
+  if (!coords && !centerRef.current) {
+    return (
+      <div className="relative h-full w-full bg-[#EDEDE7] flex flex-col items-center justify-center px-8 text-center">
+        <button onClick={onBack} className="absolute top-4 left-4 h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center text-[#334155]">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        {locStatus === "locating" ? (
+          <>
+            <div className="h-12 w-12 rounded-full border-4 border-[#0D9488]/30 border-t-[#0D9488] animate-spin mb-4" />
+            <p className="text-[14px] font-semibold text-[#334155]">Getting your location…</p>
+          </>
+        ) : (
+          <>
+            <p className="text-[15px] font-bold text-[#334155]">Location needed</p>
+            <p className="text-[12px] text-[#64748B] mt-2">The safety map is built around where you are. Allow location access and try again.</p>
+            <button onClick={retryLocation} className="mt-4 rounded-xl bg-[#0D9488] text-white px-5 py-2.5 text-[13px] font-bold">Try again</button>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-full w-full bg-[#DCE3EA] overflow-hidden">
@@ -350,7 +423,7 @@ const GuardianCityMap = ({ onBack }) => {
       {!ready && !loadError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#EDEDE7] z-20">
           <div className="h-12 w-12 rounded-full border-4 border-[#0D9488]/30 border-t-[#0D9488] animate-spin mb-4" />
-          <p className="text-[14px] font-semibold text-[#334155]">Streaming Bengaluru city tiles…</p>
+          <p className="text-[14px] font-semibold text-[#334155]">Streaming map tiles for {cityName}…</p>
           <p className="text-[12px] text-[#64748B] mt-1">Guardian City spatial engine</p>
         </div>
       )}
@@ -368,7 +441,7 @@ const GuardianCityMap = ({ onBack }) => {
         </button>
         <div className="pointer-events-auto bg-white/95 shadow-md rounded-full px-4 py-2 flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-[#0D9488]" />
-          <span className="text-[13px] font-bold text-[#334155]">Guardian City · {cityConfig.name}</span>
+          <span className="text-[13px] font-bold text-[#334155]">Guardian City · {cityName}</span>
         </div>
         <button onClick={() => setShowLayers((v) => !v)} className="pointer-events-auto h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center text-[#334155] hover:bg-white transition-colors">
           <Layers className="h-5 w-5" />
@@ -415,15 +488,19 @@ const GuardianCityMap = ({ onBack }) => {
       {/* Guardian HUD */}
       {ready && guardian && (
         <GuardianHUD
+          routes={routes}
+          routeState={routeState}
+          hasDestination={!!destination}
           activeRoute={activeRoute}
           onRoute={setActiveRoute}
+          nearestPolice={nearestPolice}
           onExit={() => setGuardian(false)}
         />
       )}
 
       {/* Building intelligence bottom sheet */}
       {selected && (
-        <BuildingIntelligence selected={selected} onClose={() => setSelected(null)} />
+        <BuildingIntelligence selected={selected} onClose={() => setSelected(null)} onRouteHere={(dest) => planRoute(dest)} canRoute={!!coords} />
       )}
     </div>
   );

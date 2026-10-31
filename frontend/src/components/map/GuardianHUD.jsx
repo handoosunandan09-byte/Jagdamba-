@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { safeRoutes } from "../../mapData";
+import { formatDistance } from "../../lib/api";
 import { useSOSDispatch } from "../../hooks/useSOSDispatch";
 import { Shield, Phone, X, Timer, Route, ShieldCheck, Check, Loader2, PhoneCall, BellRing } from "lucide-react";
 
@@ -22,7 +22,7 @@ const fireNotification = (title, body) => {
   } catch (e) { /* noop */ }
 };
 
-const GuardianHUD = ({ activeRoute, onRoute, onExit }) => {
+const GuardianHUD = ({ routes = [], routeState, hasDestination, activeRoute, onRoute, nearestPolice, onExit }) => {
   const [seconds, setSeconds] = useState(CHECK_IN_SECONDS);
   const [phase, setPhase] = useState("monitoring"); // monitoring | dispatching | alerted
   const [result, setResult] = useState(null);
@@ -30,7 +30,6 @@ const GuardianHUD = ({ activeRoute, onRoute, onExit }) => {
   const deadlineRef = useRef(Date.now() + CHECK_IN_SECONDS * 1000);
   const { dispatch } = useSOSDispatch();
 
-  const route = safeRoutes[activeRoute];
 
   const runDispatch = useCallback(async () => {
     clearInterval(ref.current);
@@ -41,7 +40,7 @@ const GuardianHUD = ({ activeRoute, onRoute, onExit }) => {
       "No safe confirmation received. Alerting your emergency contacts and the police women cell with your live location."
     );
     try {
-      const res = await dispatch({});
+      const res = await dispatch({ reason: "missed_checkin" });
       setResult(res);
     } catch (e) {
       setResult({ recipients: [], nearest_police: null });
@@ -155,12 +154,24 @@ const GuardianHUD = ({ activeRoute, onRoute, onExit }) => {
       <div className="absolute inset-x-0 bottom-0 z-10 p-4">
         <div className="bg-white/97 backdrop-blur rounded-2xl shadow-[0_-6px_28px_-10px_rgba(15,23,42,0.3)] p-4">
           {/* Route selector */}
-          <div className="flex gap-2 mb-3">
-            {Object.values(safeRoutes).map((r) => (
+          {!hasDestination && (
+            <p className="text-[12px] text-[#475569] bg-[#F8FAFC] rounded-xl px-3 py-2.5 mb-3">
+              Tap any place on the map and choose <span className="font-bold">Route here</span> to get walking routes ranked by safety.
+            </p>
+          )}
+          {routeState === "loading" && (
+            <div className="flex items-center gap-2 text-[12px] text-[#64748B] mb-3"><Loader2 className="h-4 w-4 animate-spin" /> Finding walking routes…</div>
+          )}
+          {routeState === "error" && (
+            <p className="text-[12px] text-[#B91C1C] mb-3">Couldn&apos;t find a walking route to that spot.</p>
+          )}
+          {routes.length > 0 && (
+          <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar">
+            {routes.map((r) => (
               <button
                 key={r.id}
                 onClick={() => onRoute(r.id)}
-                className={`flex-1 rounded-xl border px-3 py-2 text-left transition-colors ${
+                className={`flex-1 min-w-[130px] rounded-xl border px-3 py-2 text-left transition-colors ${
                   activeRoute === r.id ? "border-[#059669] bg-[#ECFDF5]" : "border-[#E2E8F0] bg-white"
                 }`}
               >
@@ -168,10 +179,12 @@ const GuardianHUD = ({ activeRoute, onRoute, onExit }) => {
                   <Route className="h-3.5 w-3.5" style={{ color: r.color }} />
                   <span className="text-[12px] font-bold text-[#1E293B]">{r.name}</span>
                 </div>
-                <p className="text-[11px] text-[#64748B] mt-0.5">{r.etaMin} min · {r.distanceKm} km · {r.lighting} light</p>
+                <p className="text-[11px] text-[#64748B] mt-0.5">{r.eta_min} min · {r.distance_km} km</p>
+                <p className="text-[10.5px] text-[#64748B]">{r.safe_points} help point{r.safe_points !== 1 ? "s" : ""} · {r.reported_issues} report{r.reported_issues !== 1 ? "s" : ""}</p>
               </button>
             ))}
           </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className={`rounded-xl p-3 ${urgent ? "bg-[#FEF2F2]" : "bg-[#F8FAFC]"}`}>
@@ -179,8 +192,8 @@ const GuardianHUD = ({ activeRoute, onRoute, onExit }) => {
               <p className={`text-[20px] font-extrabold tabular-nums ${urgent ? "text-[#DC2626]" : "text-[#1E293B]"}`}>{fmt(seconds)}</p>
             </div>
             <div className="rounded-xl bg-[#F0FDFA] p-3">
-              <div className="flex items-center gap-1.5 text-[#0D9488] mb-0.5"><Shield className="h-3.5 w-3.5" /><span className="text-[11px] font-semibold">Police response</span></div>
-              <p className="text-[20px] font-extrabold text-[#0D9488]">240 m</p>
+              <div className="flex items-center gap-1.5 text-[#0D9488] mb-0.5"><Shield className="h-3.5 w-3.5" /><span className="text-[11px] font-semibold">Nearest police</span></div>
+              <p className="text-[20px] font-extrabold text-[#0D9488]" title={nearestPolice?.name || ""}>{nearestPolice ? formatDistance(nearestPolice.distance_m) : "—"}</p>
             </div>
           </div>
 
