@@ -101,7 +101,7 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
             <h2 className="text-[22px] font-extrabold text-[#1B2A28]">{sentCount > 0 ? "Alert sent" : "Alert ready to send"}</h2>
             <p className="text-[14px] text-[#6B7A77] mt-2">
               {sentCount > 0
-                ? `Text message with your live location delivered to ${sentCount} of ${recipients.length} trusted contact${recipients.length !== 1 ? "s" : ""}.`
+                ? `Your live location was sent automatically to ${sentCount} of ${recipients.length} trusted contact${recipients.length !== 1 ? "s" : ""}.`
                 : "Tap WhatsApp next to each contact to send them your live location."}
             </p>
             <SosRecipients result={result} />

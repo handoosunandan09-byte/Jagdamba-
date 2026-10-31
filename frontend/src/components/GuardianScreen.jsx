@@ -253,7 +253,7 @@ const GuardianScreen = ({ onBack }) => {
               <Check className="h-10 w-10" strokeWidth={2.4} />
             </span>
             <h2 className="text-[22px] font-extrabold text-[#2A2A22]">Emergency alert sent</h2>
-            <p className="text-[14px] text-[#6E6A5E] mt-2">We detected a possible accident. {recipients.filter((r) => r.status === "sent").length} of {recipients.length} contact{recipients.length !== 1 ? "s" : ""} received a text with your live location.</p>
+            <p className="text-[14px] text-[#6E6A5E] mt-2">We detected a possible accident. {recipients.filter((r) => r.status === "sent").length} of {recipients.length} contact{recipients.length !== 1 ? "s" : ""} were alerted automatically with your live location.</p>
 
             <SosRecipients result={result} />
             <a href={result?.maps_link} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-[13px] font-semibold text-[#2F6B4A] bg-white border border-[#E7E0D1] rounded-full px-4 py-2 hover:bg-[#F3ECE1] transition-colors">

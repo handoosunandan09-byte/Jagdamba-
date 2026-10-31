@@ -40,7 +40,7 @@ const VoiceSosCard = () => {
       </div>
       {enabled && (
         <p className="text-[11px] text-[#8A8575] mt-2.5 leading-snug">
-          Works while Jagdamba is open on screen. A 3-second countdown lets you cancel a false alarm.
+          Say “Jagdamba” and the orb answers, or say the full phrase to start SOS straight away. Works while Jagdamba is open on screen; a 3-second countdown lets you cancel a false alarm.
           {heard ? <> Last heard: <span className="italic">&ldquo;{heard.slice(0, 60)}&rdquo;</span></> : null}
         </p>
       )}

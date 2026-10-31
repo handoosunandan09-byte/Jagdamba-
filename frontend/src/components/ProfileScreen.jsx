@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { emergencyContacts } from "../config";
 import { useUser } from "../context/UserContext";
 import { getContacts } from "../lib/api";
-import { MapPin, Phone, Bell, Users, ChevronRight, Pencil, LocateFixed } from "lucide-react";
+import { MapPin, Phone, Bell, Users, ChevronRight, Pencil, LocateFixed, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 const notifState = () => {
@@ -36,6 +36,7 @@ const ProfileScreen = ({ onNavigate }) => {
     { icon: Users, label: "Trusted contacts", value: contactCount == null ? "Manage" : `${contactCount}`, onClick: () => onNavigate("contacts") },
     { icon: LocateFixed, label: "Location access", value: locValue, onClick: retryLocation },
     { icon: Bell, label: "Alert notifications", value: notif, onClick: enableNotifications },
+    { icon: KeyRound, label: "App permissions", value: "Review", onClick: () => onNavigate("apppermissions") },
   ];
 
   return (

@@ -3,9 +3,16 @@ import { Check, MessageCircle, Send } from "lucide-react";
 import { buildSmsUri, whatsappUrl } from "../lib/api";
 
 const chip = {
-  sent: { cls: "text-[#2F6B4A] bg-[#E4EEE2]", label: "SMS sent" },
-  failed: { cls: "text-[#C1452A] bg-[#FBEAE3]", label: "SMS failed" },
-  not_sent: { cls: "text-[#B07A1E] bg-[#FBF1DE]", label: "Not sent yet" },
+  sent: { cls: "text-[#2F6B4A] bg-[#E4EEE2]", label: "Sent" },
+  failed: { cls: "text-[#C1452A] bg-[#FBEAE3]", label: "Not delivered" },
+  not_sent: { cls: "text-[#B07A1E] bg-[#FBF1DE]", label: "Tap to send" },
+};
+
+// "Sent on WhatsApp", "Sent by SMS", "Sent on WhatsApp + SMS"
+const sentLabel = (channels = {}) => {
+  const ok = Object.entries(channels).filter(([, s]) => s === "sent").map(([ch]) => (ch === "whatsapp" ? "WhatsApp" : "SMS"));
+  if (!ok.length) return "Sent";
+  return ok.length === 1 ? (ok[0] === "WhatsApp" ? "Sent on WhatsApp" : "Sent by SMS") : `Sent on ${ok.join(" + ")}`;
 };
 
 // Per-contact delivery status for an SOS, with a one-tap WhatsApp message for
@@ -25,8 +32,11 @@ const SosRecipients = ({ result }) => {
               <div className="flex-1 min-w-0">
                 <p className="text-[13.5px] font-semibold text-[#2A2A22] truncate">{r.name}</p>
                 <span title={r.error || ""} className={`mt-0.5 inline-flex items-center gap-1 text-[10.5px] font-bold rounded-full px-2 py-0.5 ${c.cls}`}>
-                  {r.status === "sent" && <Check className="h-3 w-3" />} {c.label}
+                  {r.status === "sent" && <Check className="h-3 w-3" />} {r.status === "sent" ? sentLabel(r.channels) : c.label}
                 </span>
+                {r.status === "failed" && r.error && (
+                  <p className="text-[10.5px] text-[#C1452A] mt-1 leading-snug">{r.error.replace(/^(whatsapp|sms): /i, "")}</p>
+                )}
               </div>
               <a href={whatsappUrl(r.phone, message)} target="_blank" rel="noreferrer"
                 className="shrink-0 rounded-full bg-[#25D366] text-white px-3 py-2 text-[12.5px] font-bold flex items-center gap-1.5 hover:bg-[#1EBE5A] transition-colors"
