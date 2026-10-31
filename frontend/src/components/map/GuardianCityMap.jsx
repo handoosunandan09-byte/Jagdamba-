@@ -1,28 +1,63 @@
-// Guardian City 3D spatial map (CesiumJS) for Jagdamba — centred on the user's live location.
-// Set the Cesium static asset base URL BEFORE importing Cesium.
-window.CESIUM_BASE_URL = "/cesium";
-
+// Guardian City 3D map, built on MapLibre GL with free OpenFreeMap vector tiles
+// (OpenStreetMap data, real 3D building heights, no API key). Centred on the
+// user's live location.
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import * as Cesium from "cesium";
-import "cesium/Build/Cesium/Widgets/widgets.css";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { poiStyles, guardianRadiusOptions } from "../../config";
 import { useUser } from "../../context/UserContext";
 import { getNearby, getAlerts, getBuildingSummary, getSafeRoutes } from "../../lib/api";
 import BuildingIntelligence from "./BuildingIntelligence";
 import GuardianHUD from "./GuardianHUD";
-import { ChevronLeft, ShieldCheck, Layers, Navigation2 } from "lucide-react";
+import { ChevronLeft, ShieldCheck, Layers, Navigation2, LocateFixed, Box } from "lucide-react";
 
-const ION_TOKEN = process.env.REACT_APP_CESIUM_ION_TOKEN;
-const GROUND_M = 0; // camera altitude offset (terrain is ellipsoid unless an ion token is set)
-const CAMERA_ALT = 1500;
-const CAMERA_PITCH = -45;
+const STYLE_URL = process.env.REACT_APP_MAP_STYLE_URL || "https://tiles.openfreemap.org/styles/liberty";
+const CITY_VIEW = { zoom: 15.6, pitch: 58, bearing: -20 };
+const GUARDIAN_VIEW = { zoom: 17.2, pitch: 65, bearing: 30 };
 
-const typeGlyph = {
-  hospital: "H",
-  police: "P",
-  pharmacy: "+",
-  incident: "!",
+const typeGlyph = { hospital: "H", police: "P", pharmacy: "+", incident: "!" };
+const EMPTY = { type: "FeatureCollection", features: [] };
+
+// GeoJSON circle polygon (metres) for the guardian radius
+const circle = (lng, lat, radiusM, steps = 72) => {
+  const coords = [];
+  const dLat = radiusM / 111320;
+  const dLng = radiusM / (111320 * Math.cos((lat * Math.PI) / 180));
+  for (let i = 0; i <= steps; i++) {
+    const a = (i / steps) * 2 * Math.PI;
+    coords.push([lng + dLng * Math.cos(a), lat + dLat * Math.sin(a)]);
+  }
+  return { type: "FeatureCollection", features: [{ type: "Feature", geometry: { type: "Polygon", coordinates: [coords] }, properties: {} }] };
 };
+
+const poisToGeoJSON = (list) => ({
+  type: "FeatureCollection",
+  features: list.map((p) => ({
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+    properties: {
+      ...p,
+      color: (poiStyles[p.type] || poiStyles.incident).color,
+      glyph: typeGlyph[p.type] || "•",
+    },
+  })),
+});
+
+const userMarkerEl = () => {
+  const el = document.createElement("div");
+  el.style.cssText = "position:relative;width:22px;height:22px;";
+  el.innerHTML = `
+    <span style="position:absolute;inset:-14px;border-radius:9999px;background:rgba(13,148,136,.25);animation:jg-ping 1.8s ease-out infinite"></span>
+    <span style="position:absolute;inset:0;border-radius:9999px;background:#0D9488;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35)"></span>`;
+  return el;
+};
+
+const MAP_CSS = `
+@keyframes jg-ping { 0% { transform: scale(.5); opacity: .9 } 100% { transform: scale(1.6); opacity: 0 } }
+.jg-map .maplibregl-ctrl-top-left { top: 64px; }
+.jg-map .maplibregl-ctrl-group { border-radius: 14px; box-shadow: 0 4px 14px rgba(15,23,42,.18); }
+.jg-map .maplibregl-ctrl-attrib { font-size: 10px; }
+`;
 
 const GuardianCityMap = ({ onBack }) => {
   const { coords, place, locStatus, retryLocation } = useUser();
@@ -31,251 +66,27 @@ const GuardianCityMap = ({ onBack }) => {
   if (!centerRef.current && coords) centerRef.current = { lat: coords.lat, lng: coords.lng };
   const userRef = useRef(coords);
   userRef.current = coords;
-  const poiEntitiesRef = useRef([]);
-  const [pois, setPois] = useState([]);
-  const [destination, setDestination] = useState(null);
-  const [routes, setRoutes] = useState([]);
-  const [routeState, setRouteState] = useState("idle"); // idle | loading | ready | error
+
   const containerRef = useRef(null);
-  const viewerRef = useRef(null);
-  const userEntityRef = useRef(null);
-  const radiusEntityRef = useRef(null);
-  const routeEntitiesRef = useRef([]);
+  const mapRef = useRef(null);
+  const userMarkerRef = useRef(null);
+  const pickMarkerRef = useRef(null);
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [guardian, setGuardian] = useState(false);
   const [radius, setRadius] = useState(500);
   const [activeRoute, setActiveRoute] = useState("A");
-  const [selected, setSelected] = useState(null); // building intelligence payload
+  const [selected, setSelected] = useState(null);
   const [showLayers, setShowLayers] = useState(true);
-
-  // ---- Initialise the Cesium viewer once ----
-  useEffect(() => {
-    let viewer;
-    let cancelled = false;
-
-    const init = async () => {
-      try {
-        // Always set the ion token explicitly. Setting it (or "" when absent)
-        // prevents Cesium from using its built-in demo token, which is what
-        // triggers the "default ion access token / API key required" panel.
-        Cesium.Ion.defaultAccessToken = ION_TOKEN || "";
-
-        viewer = new Cesium.Viewer(containerRef.current, {
-          animation: false,
-          timeline: false,
-          baseLayerPicker: false,
-          geocoder: false,
-          homeButton: false,
-          sceneModePicker: false,
-          navigationHelpButton: false,
-          fullscreenButton: false,
-          infoBox: false,
-          selectionIndicator: false,
-          showRenderLoopErrors: false, // never show Cesium's red error panel to users
-          creditContainer: document.createElement("div"),
-          baseLayer: Cesium.ImageryLayer.fromProviderAsync(
-            Promise.resolve(new Cesium.UrlTemplateImageryProvider({
-              url: "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-              credit: "© OpenStreetMap contributors, © CARTO",
-              maximumLevel: 19,
-            }))
-          ),
-          terrainProvider: new Cesium.EllipsoidTerrainProvider(),
-        });
-        if (cancelled || viewer.isDestroyed()) { if (viewer && !viewer.isDestroyed()) viewer.destroy(); return; }
-        viewerRef.current = viewer;
-
-        // Clean, light "civic" look (Apple-Maps-like)
-        const scene = viewer.scene;
-        scene.skyAtmosphere.show = true;
-        scene.globe.baseColor = Cesium.Color.fromCssColorString("#EDEDE7");
-        scene.fog.enabled = true;
-        scene.fog.density = 0.0002;
-        scene.globe.enableLighting = false;
-        scene.backgroundColor = Cesium.Color.fromCssColorString("#DCE3EA");
-        scene.highDynamicRange = false;
-
-        // Terrain (requires ion token) — best-effort, non-blocking
-        if (ION_TOKEN) {
-          try {
-            const terrain = await Cesium.createWorldTerrainAsync();
-            if (cancelled || viewer.isDestroyed()) return;
-            viewer.terrainProvider = terrain;
-          } catch (e) { /* keep ellipsoid */ }
-        }
-
-        // 3D Buildings: streamed Cesium OSM Buildings (ion) with a restrained style
-        if (ION_TOKEN) {
-          try {
-            const osm = await Cesium.createOsmBuildingsAsync();
-            if (cancelled || viewer.isDestroyed()) return;
-            osm.style = new Cesium.Cesium3DTileStyle({
-              color: {
-                conditions: [
-                  ["${feature['building']} === 'hospital'", "color('#2563EB')"],
-                  ["${feature['building']} === 'clinic'", "color('#2563EB')"],
-                  ["${feature['building']} === 'police'", "color('#0D9488')"],
-                  ["true", "color('#E2E8F0')"],
-                ],
-              },
-            });
-            viewer.scene.primitives.add(osm);
-            // Swallow any per-tile load failures so no error surfaces to the user
-            try { osm.tileFailed.addEventListener(() => {}); } catch (e) { /* noop */ }
-          } catch (e) { /* buildings unavailable — flat basemap only */ }
-        }
-
-        if (cancelled || viewer.isDestroyed()) return;
-
-        // Tilted overview around the user
-        const c = centerRef.current;
-        viewer.camera.setView({
-          destination: Cesium.Cartesian3.fromDegrees(c.lng, c.lat - 0.012, GROUND_M + CAMERA_ALT),
-          orientation: {
-            heading: Cesium.Math.toRadians(20),
-            pitch: Cesium.Math.toRadians(CAMERA_PITCH),
-            roll: 0,
-          },
-        });
-
-        drawUser(viewer);
-        drawRadius(viewer, radius);
-        setupPicking(viewer);
-
-        if (!cancelled) setReady(true);
-      } catch (err) {
-        console.error("Cesium init failed", err);
-        if (!cancelled) setLoadError(err.message || "Failed to initialise 3D map");
-      }
-    };
-
-    if (centerRef.current) init();
-
-    return () => {
-      cancelled = true;
-      try {
-        if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-          viewerRef.current.destroy();
-        }
-      } catch (e) { /* noop */ }
-      viewerRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!centerRef.current]);
-
-  // ---- Helpers ----
-  const drawPois = (viewer, list) => {
-    poiEntitiesRef.current.forEach((e) => viewer.entities.remove(e));
-    poiEntitiesRef.current = [];
-    list.forEach((p) => {
-      const col = poiStyles[p.type].color;
-      const ent = viewer.entities.add({
-        id: `poi-${p.id}`,
-        position: Cesium.Cartesian3.fromDegrees(p.lng, p.lat),
-        point: {
-          pixelSize: p.type === "incident" ? 14 : 12,
-          color: Cesium.Color.fromCssColorString(col),
-          outlineColor: Cesium.Color.WHITE,
-          outlineWidth: 2,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        },
-        label: {
-          text: typeGlyph[p.type],
-          font: "bold 11px sans-serif",
-          fillColor: Cesium.Color.WHITE,
-          verticalOrigin: Cesium.VerticalOrigin.CENTER,
-          horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
-          pixelOffset: new Cesium.Cartesian2(0, 0),
-        },
-        properties: { poi: p },
-      });
-      poiEntitiesRef.current.push(ent);
-    });
-  };
-
-  const drawUser = (viewer) => {
-    userEntityRef.current = viewer.entities.add({
-      id: "user-pos",
-      position: Cesium.Cartesian3.fromDegrees(userRef.current.lng, userRef.current.lat),
-      point: {
-        pixelSize: 16,
-        color: Cesium.Color.fromCssColorString("#0D9488"),
-        outlineColor: Cesium.Color.WHITE,
-        outlineWidth: 3,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      },
-    });
-  };
-
-  const drawRadius = (viewer, r) => {
-    if (radiusEntityRef.current) viewer.entities.remove(radiusEntityRef.current);
-    radiusEntityRef.current = viewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(userRef.current.lng, userRef.current.lat),
-      ellipse: {
-        semiMajorAxis: r,
-        semiMinorAxis: r,
-        material: Cesium.Color.fromCssColorString("#0D9488").withAlpha(0.12),
-        outline: true,
-        outlineColor: Cesium.Color.fromCssColorString("#0D9488").withAlpha(0.6),
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-      },
-    });
-  };
-
-  const clearRoutes = (viewer) => {
-    routeEntitiesRef.current.forEach((e) => viewer.entities.remove(e));
-    routeEntitiesRef.current = [];
-  };
-
-  const drawRoute = (viewer, routeKey) => {
-    clearRoutes(viewer);
-    const route = routes.find((r) => r.id === routeKey);
-    if (!route) return;
-    const positions = route.path.flatMap((pt) => [pt.lng, pt.lat]);
-    const line = viewer.entities.add({
-      polyline: {
-        positions: Cesium.Cartesian3.fromDegreesArray(positions),
-        width: 9,
-        material: new Cesium.PolylineGlowMaterialProperty({
-          glowPower: 0.25,
-          color: Cesium.Color.fromCssColorString(route.color),
-        }),
-        clampToGround: true,
-      },
-    });
-    routeEntitiesRef.current.push(line);
-  };
-
-  const setupPicking = (viewer) => {
-    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-    handler.setInputAction(async (movement) => {
-      const picked = viewer.scene.pick(movement.position);
-      const cart = viewer.scene.pickPosition(movement.position) ||
-        viewer.camera.pickEllipsoid(movement.position, viewer.scene.globe.ellipsoid);
-      if (!cart) return;
-      const carto = Cesium.Cartographic.fromCartesian(cart);
-      const lat = Cesium.Math.toDegrees(carto.latitude);
-      const lng = Cesium.Math.toDegrees(carto.longitude);
-
-      // POI clicked?
-      if (picked && picked.id && typeof picked.id.id === "string" && picked.id.id.startsWith("poi-")) {
-        const p = picked.id.properties.poi.getValue();
-        await fetchSummary(lat, lng, p);
-        return;
-      }
-      // Otherwise treat as building/ground selection
-      await fetchSummary(lat, lng, null);
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-  };
+  const [pois, setPois] = useState([]);
+  const [destination, setDestination] = useState(null);
+  const [routes, setRoutes] = useState([]);
+  const [routeState, setRouteState] = useState("idle"); // idle | loading | ready | error
+  const [is3d, setIs3d] = useState(true);
 
   const fetchSummary = useCallback(async (lat, lng, poi) => {
-    setSelected({ loading: true, poi });
+    setSelected({ loading: true, poi, lat, lng });
     try {
       const u = userRef.current;
       const data = await getBuildingSummary({ lat, lng, ...(u ? { user_lat: u.lat, user_lng: u.lng } : {}) });
@@ -284,50 +95,152 @@ const GuardianCityMap = ({ onBack }) => {
       setSelected({ loading: false, poi, error: true, lat, lng });
     }
   }, []);
+  const fetchSummaryRef = useRef(fetchSummary);
+  fetchSummaryRef.current = fetchSummary;
 
-  // ---- React -> Cesium side effects ----
+  // ---- Create the map once we know where the user is ----
+  const hasCenter = !!centerRef.current;
   useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer || !ready) return;
-    drawRadius(viewer, radius);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [radius, ready]);
+    if (!hasCenter || !containerRef.current) return undefined;
+    const c = centerRef.current;
+    let map;
+    try {
+      map = new maplibregl.Map({
+        container: containerRef.current,
+        style: STYLE_URL,
+        center: [c.lng, c.lat],
+        ...CITY_VIEW,
+        maxPitch: 75,
+        attributionControl: { compact: true },
+        canvasContextAttributes: { antialias: true },
+      });
+    } catch (err) {
+      setLoadError(err.message || "This device can't show the 3D map (WebGL unavailable).");
+      return undefined;
+    }
+    mapRef.current = map;
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showZoom: true }), "top-left");
 
-  // Live POIs (OpenStreetMap) + community-reported issues around the user
+    map.on("error", (e) => {
+      // Tile hiccups are normal; only surface a failure to load the style itself
+      if (!map.isStyleLoaded() && !map.loaded()) setLoadError(e?.error?.message || "Map tiles couldn't load");
+    });
+
+    map.on("load", () => {
+      setLoadError(null);
+
+      // Civic look for the real 3D buildings from OpenStreetMap
+      if (map.getLayer("building-3d")) {
+        map.setPaintProperty("building-3d", "fill-extrusion-color", [
+          "interpolate", ["linear"], ["coalesce", ["get", "render_height"], 0],
+          0, "#E2E8F0", 30, "#CBD5E1", 80, "#94A3B8",
+        ]);
+        map.setPaintProperty("building-3d", "fill-extrusion-opacity", 0.92);
+      }
+
+      map.addSource("guardian-radius", { type: "geojson", data: EMPTY });
+      map.addLayer({ id: "guardian-radius-fill", type: "fill", source: "guardian-radius", paint: { "fill-color": "#0D9488", "fill-opacity": 0.1 } });
+      map.addLayer({ id: "guardian-radius-line", type: "line", source: "guardian-radius", paint: { "line-color": "#0D9488", "line-width": 2, "line-opacity": 0.7, "line-dasharray": [2, 1.5] } });
+
+      map.addSource("route", { type: "geojson", data: EMPTY });
+      map.addLayer({ id: "route-glow", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["get", "color"], "line-width": 14, "line-opacity": 0.25, "line-blur": 4 } });
+      map.addLayer({ id: "route-line", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["get", "color"], "line-width": 6 } });
+
+      map.addSource("pois", { type: "geojson", data: EMPTY });
+      map.addLayer({
+        id: "poi-circles", type: "circle", source: "pois",
+        paint: {
+          "circle-radius": ["case", ["==", ["get", "type"], "incident"], 11, 10],
+          "circle-color": ["get", "color"],
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 2.5,
+          "circle-pitch-alignment": "viewport",
+        },
+      });
+      map.addLayer({
+        id: "poi-glyphs", type: "symbol", source: "pois",
+        layout: { "text-field": ["get", "glyph"], "text-font": ["Noto Sans Bold"], "text-size": 11, "text-allow-overlap": true, "text-ignore-placement": true },
+        paint: { "text-color": "#ffffff" },
+      });
+
+      userMarkerRef.current = new maplibregl.Marker({ element: userMarkerEl() })
+        .setLngLat([(userRef.current || c).lng, (userRef.current || c).lat])
+        .addTo(map);
+
+      map.on("click", (e) => {
+        const hit = map.queryRenderedFeatures(e.point, { layers: ["poi-circles"] })[0];
+        const { lng, lat } = e.lngLat;
+        if (pickMarkerRef.current) pickMarkerRef.current.remove();
+        pickMarkerRef.current = new maplibregl.Marker({ color: "#7C3AED", scale: 0.8 }).setLngLat([lng, lat]).addTo(map);
+        if (hit) {
+          const p = hit.properties;
+          fetchSummaryRef.current(Number(p.lat), Number(p.lng), { ...p, lat: Number(p.lat), lng: Number(p.lng) });
+        } else {
+          fetchSummaryRef.current(lat, lng, null);
+        }
+      });
+      map.on("mouseenter", "poi-circles", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "poi-circles", () => { map.getCanvas().style.cursor = ""; });
+
+      setReady(true);
+    });
+
+    return () => {
+      try { map.remove(); } catch (e) { /* noop */ }
+      mapRef.current = null;
+      userMarkerRef.current = null;
+      setReady(false);
+    };
+  }, [hasCenter]);
+
+  // ---- Live POIs (OpenStreetMap) + community-reported issues ----
   useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer || !ready) return;
+    const map = mapRef.current;
+    if (!map || !ready) return undefined;
     const c = centerRef.current;
     let cancelled = false;
     Promise.allSettled([
       getNearby({ lat: c.lat, lng: c.lng, radius: 3000, types: "police,hospital,pharmacy" }),
       getAlerts({ lat: c.lat, lng: c.lng, radius: 3000, days: 30 }),
     ]).then(([placesRes, alertsRes]) => {
-      if (cancelled || viewer.isDestroyed()) return;
+      if (cancelled || !mapRef.current) return;
       const places = placesRes.status === "fulfilled" ? placesRes.value : [];
       const incidents = alertsRes.status === "fulfilled"
         ? alertsRes.value.map((a) => ({ id: `r-${a.id}`, type: "incident", name: a.title, lat: a.lat, lng: a.lng, ward: a.area }))
         : [];
       const list = [...places, ...incidents];
       setPois(list);
-      drawPois(viewer, list);
+      map.getSource("pois")?.setData(poisToGeoJSON(list));
     });
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
-  // Keep the user marker + guardian radius on the live GPS position
+  // ---- Live user position + guardian radius ----
   useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer || !ready || !coords || viewer.isDestroyed()) return;
-    if (userEntityRef.current) {
-      userEntityRef.current.position = Cesium.Cartesian3.fromDegrees(coords.lng, coords.lat);
-    }
-    drawRadius(viewer, radius);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coords?.lat, coords?.lng, ready]);
+    const map = mapRef.current;
+    const u = coords || centerRef.current;
+    if (!map || !ready || !u) return;
+    userMarkerRef.current?.setLngLat([u.lng, u.lat]);
+    map.getSource("guardian-radius")?.setData(circle(u.lng, u.lat, radius));
+  }, [coords?.lat, coords?.lng, radius, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Walking routes to the chosen destination, ranked by safety
+  // ---- Layer visibility ----
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const vis = showLayers ? "visible" : "none";
+    ["poi-circles", "poi-glyphs", "guardian-radius-fill", "guardian-radius-line"].forEach((id) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", vis));
+  }, [showLayers, ready]);
+
+  // ---- 2D / 3D toggle ----
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    if (map.getLayer("building-3d")) map.setLayoutProperty("building-3d", "visibility", is3d ? "visible" : "none");
+    map.easeTo({ pitch: is3d ? (guardian ? GUARDIAN_VIEW.pitch : CITY_VIEW.pitch) : 0, duration: 800 });
+  }, [is3d, ready]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- Safe walking routes ----
   const planRoute = useCallback(async (dest) => {
     const from = userRef.current;
     if (!from) return;
@@ -347,36 +260,40 @@ const GuardianCityMap = ({ onBack }) => {
   }, []);
 
   useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer || !ready) return;
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const route = guardian ? routes.find((r) => r.id === activeRoute) : null;
+    map.getSource("route")?.setData(route ? {
+      type: "FeatureCollection",
+      features: [{ type: "Feature", properties: { color: route.color }, geometry: { type: "LineString", coordinates: route.path.map((p) => [p.lng, p.lat]) } }],
+    } : EMPTY);
+    if (route && route.path.length > 1) {
+      const b = new maplibregl.LngLatBounds();
+      route.path.forEach((p) => b.extend([p.lng, p.lat]));
+      map.fitBounds(b, { padding: { top: 120, bottom: 300, left: 40, right: 40 }, pitch: is3d ? 50 : 0, duration: 1200 });
+    }
+  }, [activeRoute, routes, guardian, ready]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- Camera for Guardian Mode on/off ----
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
     const u = userRef.current || centerRef.current;
-    const c = centerRef.current;
     if (guardian) {
-      viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(u.lng, u.lat - 0.004, GROUND_M + 350),
-        orientation: { heading: Cesium.Math.toRadians(35), pitch: Cesium.Math.toRadians(-30), roll: 0 },
-        duration: 2.2,
-      });
+      map.flyTo({ center: [u.lng, u.lat], ...GUARDIAN_VIEW, pitch: is3d ? GUARDIAN_VIEW.pitch : 0, duration: 2000 });
     } else {
-      clearRoutes(viewer);
       setRoutes([]);
       setDestination(null);
       setRouteState("idle");
-      viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(c.lng, c.lat - 0.012, GROUND_M + CAMERA_ALT),
-        orientation: { heading: Cesium.Math.toRadians(20), pitch: Cesium.Math.toRadians(CAMERA_PITCH), roll: 0 },
-        duration: 1.8,
-      });
+      map.flyTo({ center: [u.lng, u.lat], ...CITY_VIEW, pitch: is3d ? CITY_VIEW.pitch : 0, duration: 1600 });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guardian, ready]);
+  }, [guardian, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer || !ready || !guardian) return;
-    drawRoute(viewer, activeRoute);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRoute, routes]);
+  const recenter = () => {
+    const map = mapRef.current;
+    const u = userRef.current || centerRef.current;
+    if (map && u) map.flyTo({ center: [u.lng, u.lat], zoom: Math.max(map.getZoom(), 16), duration: 900 });
+  };
 
   const nearestPolice = (() => {
     const u = coords || centerRef.current;
@@ -416,18 +333,21 @@ const GuardianCityMap = ({ onBack }) => {
   }
 
   return (
-    <div className="relative h-full w-full bg-[#DCE3EA] overflow-hidden">
-      <div ref={containerRef} className="absolute inset-0" />
+    <div className="jg-map relative h-full w-full bg-[#DCE3EA] overflow-hidden">
+      <style>{MAP_CSS}</style>
+      {/* MapLibre forces position:relative on its container, so give it an explicit size */}
+      <div className="absolute inset-0">
+        <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+      </div>
 
-      {/* Loading / error overlay */}
       {!ready && !loadError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#EDEDE7] z-20">
           <div className="h-12 w-12 rounded-full border-4 border-[#0D9488]/30 border-t-[#0D9488] animate-spin mb-4" />
-          <p className="text-[14px] font-semibold text-[#334155]">Streaming map tiles for {cityName}…</p>
-          <p className="text-[12px] text-[#64748B] mt-1">Guardian City spatial engine</p>
+          <p className="text-[14px] font-semibold text-[#334155]">Loading 3D map of {cityName}…</p>
+          <p className="text-[12px] text-[#64748B] mt-1">Guardian City · OpenStreetMap</p>
         </div>
       )}
-      {loadError && (
+      {loadError && !ready && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#EDEDE7] z-20 px-8 text-center">
           <p className="text-[15px] font-bold text-[#334155]">3D map couldn&apos;t load</p>
           <p className="text-[12px] text-[#64748B] mt-2">{loadError}</p>
@@ -436,17 +356,29 @@ const GuardianCityMap = ({ onBack }) => {
 
       {/* Top bar */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 pt-4 pb-3 pointer-events-none">
-        <button onClick={onBack} className="pointer-events-auto h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center text-[#334155] hover:bg-white transition-colors">
+        <button onClick={onBack} aria-label="Back" className="pointer-events-auto h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center text-[#334155] hover:bg-white transition-colors">
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <div className="pointer-events-auto bg-white/95 shadow-md rounded-full px-4 py-2 flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-[#0D9488]" />
-          <span className="text-[13px] font-bold text-[#334155]">Guardian City · {cityName}</span>
+        <div className="pointer-events-auto bg-white/95 shadow-md rounded-full px-4 py-2 flex items-center gap-2 max-w-[60%]">
+          <ShieldCheck className="h-4 w-4 text-[#0D9488] shrink-0" />
+          <span className="text-[13px] font-bold text-[#334155] truncate">Guardian City · {cityName}</span>
         </div>
-        <button onClick={() => setShowLayers((v) => !v)} className="pointer-events-auto h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center text-[#334155] hover:bg-white transition-colors">
+        <button onClick={() => setShowLayers((v) => !v)} aria-label="Layers" className="pointer-events-auto h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center text-[#334155] hover:bg-white transition-colors">
           <Layers className="h-5 w-5" />
         </button>
       </div>
+
+      {/* Right-side quick controls */}
+      {ready && (
+        <div className="absolute right-4 z-10 flex flex-col gap-2" style={{ top: showLayers ? 340 : 72 }}>
+          <button onClick={() => setIs3d((v) => !v)} aria-label="Toggle 3D" className="h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center text-[11px] font-extrabold text-[#334155]">
+            {is3d ? "2D" : <Box className="h-4.5 w-4.5" />}
+          </button>
+          <button onClick={recenter} aria-label="Centre on me" className="h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center text-[#0D9488]">
+            <LocateFixed className="h-4.5 w-4.5" />
+          </button>
+        </div>
+      )}
 
       {/* Legend / layers */}
       {showLayers && ready && (
@@ -485,7 +417,6 @@ const GuardianCityMap = ({ onBack }) => {
         </button>
       )}
 
-      {/* Guardian HUD */}
       {ready && guardian && (
         <GuardianHUD
           routes={routes}
@@ -498,9 +429,8 @@ const GuardianCityMap = ({ onBack }) => {
         />
       )}
 
-      {/* Building intelligence bottom sheet */}
       {selected && (
-        <BuildingIntelligence selected={selected} onClose={() => setSelected(null)} onRouteHere={(dest) => planRoute(dest)} canRoute={!!coords} />
+        <BuildingIntelligence selected={selected} onClose={() => { setSelected(null); pickMarkerRef.current?.remove(); }} onRouteHere={(dest) => planRoute(dest)} canRoute={!!coords} />
       )}
     </div>
   );
