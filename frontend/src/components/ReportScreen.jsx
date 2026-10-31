@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import ScreenHeader from "./ScreenHeader";
-import { issueCategories, currentUser } from "../mock";
+import { issueCategories } from "../config";
+import { useUser } from "../context/UserContext";
 import { MapPin, Camera, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { submitReport } from "../lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 const ReportScreen = ({ onBack }) => {
+  const { coords, locationLabel, locStatus, firstName } = useUser();
   const [category, setCategory] = useState("");
   const [desc, setDesc] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -20,7 +22,10 @@ const ReportScreen = ({ onBack }) => {
     }
     setLoading(true);
     try {
-      const data = await submitReport({ category, description: desc, location: currentUser.location });
+      const data = await submitReport({
+        category, description: desc, location: locationLabel,
+        lat: coords?.lat ?? null, lng: coords?.lng ?? null,
+      });
       setTicket(data.ticket);
       setSubmitted(true);
     } catch (e) {
@@ -38,8 +43,8 @@ const ReportScreen = ({ onBack }) => {
           <span className="h-20 w-20 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center mb-5 pop-in">
             <CheckCircle2 className="h-10 w-10" />
           </span>
-          <h3 className="text-[20px] font-extrabold text-[#1B2A28]">Thank you, Priya!</h3>
-          <p className="text-[14px] text-[#6B7A77] mt-2">Your report has been logged and forwarded to the local authorities. We&apos;ll notify you when it&apos;s picked up.</p>
+          <h3 className="text-[20px] font-extrabold text-[#1B2A28]">Thank you{firstName ? `, ${firstName}` : ""}!</h3>
+          <p className="text-[14px] text-[#6B7A77] mt-2">Your report has been logged and is now visible to people nearby in Community Alerts.</p>
           <p className="text-[12px] text-[#9AA7A3] mt-2">Ticket #{ticket}</p>
           <button onClick={onBack} className="mt-7 w-full rounded-2xl bg-[#E5603C] text-white py-3.5 text-[15px] font-bold hover:bg-[#d9542f] transition-colors">Back to Home</button>
         </div>
@@ -55,7 +60,7 @@ const ReportScreen = ({ onBack }) => {
           <span className="h-9 w-9 rounded-full bg-[#FBEAE3] text-[#E5603C] flex items-center justify-center"><MapPin className="h-4.5 w-4.5" /></span>
           <div>
             <p className="text-[12px] text-[#6B7A77]">Detected location</p>
-            <p className="text-[14px] font-bold text-[#1B2A28]">{currentUser.location}</p>
+            <p className="text-[14px] font-bold text-[#1B2A28]">{locationLabel || (locStatus === "denied" ? "Location blocked — report won't appear on the map" : "Locating…")}</p>
           </div>
         </div>
 

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import ScreenHeader from "./ScreenHeader";
 import { ShieldCheck, Clock, UserPlus, Square } from "lucide-react";
 import { toast } from "sonner";
+import { getContacts } from "../lib/api";
+import { useSOSDispatch } from "../hooks/useSOSDispatch";
 
 const durations = [15, 30, 60];
 
@@ -10,16 +12,32 @@ const SafetyModeScreen = ({ onBack, onManageContacts }) => {
   const [active, setActive] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const timerRef = useRef(null);
+  const [contacts, setContacts] = useState(null);
+  const { dispatch } = useSOSDispatch();
 
   useEffect(() => () => clearInterval(timerRef.current), []);
+  useEffect(() => { getContacts().then(setContacts).catch(() => setContacts([])); }, []);
+
+  // Missed check-in: alert trusted contacts with live location
+  const onMissedCheckIn = async () => {
+    toast.error("Missed check-in", { description: "Alerting your trusted contacts with your location…" });
+    try {
+      const res = await dispatch({ reason: "missed_checkin" });
+      const sent = (res.recipients || []).filter((r) => r.status === "sent").length;
+      if (sent > 0) toast.success(`Alert texted to ${sent} contact${sent !== 1 ? "s" : ""}`);
+      else if (res.smsUri) window.location.href = res.smsUri;
+    } catch (e) {
+      toast.error("Couldn't send the alert. Call 112 if you need help.");
+    }
+  };
 
   const start = () => {
     setActive(true);
     setRemaining(selected * 60);
-    toast.success("Safety Mode started", { description: `We'll check in every ${selected} minutes.` });
+    toast.success("Safety Mode started", { description: `Stop the timer within ${selected} minutes or your contacts get an alert.` });
     timerRef.current = setInterval(() => {
       setRemaining((r) => {
-        if (r <= 1) { clearInterval(timerRef.current); setActive(false); return 0; }
+        if (r <= 1) { clearInterval(timerRef.current); setActive(false); onMissedCheckIn(); return 0; }
         return r - 1;
       });
     }, 1000);
@@ -29,7 +47,7 @@ const SafetyModeScreen = ({ onBack, onManageContacts }) => {
     clearInterval(timerRef.current);
     setActive(false);
     setRemaining(0);
-    toast("Safety Mode stopped", { description: "Your trusted contact has been notified you're safe." });
+    toast("Safety Mode stopped", { description: "Glad you're safe. No alert was sent." });
   };
 
   const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -48,7 +66,7 @@ const SafetyModeScreen = ({ onBack, onManageContacts }) => {
           >
             <ShieldCheck className="h-8 w-8 mb-1" />
             <span className="text-[26px] font-extrabold tracking-tight">{active ? fmt(remaining) : "Ready"}</span>
-            <span className="text-[12px] text-white/80">{active ? "Next check-in" : "Safety Mode off"}</span>
+            <span className="text-[12px] text-white/80">{active ? "Until auto-alert" : "Safety Mode off"}</span>
           </div>
         </div>
 
@@ -79,11 +97,13 @@ const SafetyModeScreen = ({ onBack, onManageContacts }) => {
           <div className="flex items-center gap-3">
             <span className="h-9 w-9 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center"><UserPlus className="h-4.5 w-4.5" /></span>
             <div>
-              <p className="text-[14px] font-bold text-[#1B2A28]">Trusted contact</p>
-              <p className="text-[12px] text-[#6B7A77]">Mom • +91 99887 76655</p>
+              <p className="text-[14px] font-bold text-[#1B2A28]">Trusted contact{contacts && contacts.length > 1 ? "s" : ""}</p>
+              <p className="text-[12px] text-[#6B7A77]">
+                {contacts == null ? "Loading…" : contacts.length === 0 ? "None added yet" : `${contacts[0].name} • ${contacts[0].phone}${contacts.length > 1 ? ` +${contacts.length - 1} more` : ""}`}
+              </p>
             </div>
           </div>
-          <button onClick={onManageContacts} className="text-[12px] font-semibold text-[#2F6B4A]">Change</button>
+          <button onClick={onManageContacts} className="text-[12px] font-semibold text-[#2F6B4A]">{contacts && contacts.length === 0 ? "Add" : "Change"}</button>
         </div>
 
         {!active ? (

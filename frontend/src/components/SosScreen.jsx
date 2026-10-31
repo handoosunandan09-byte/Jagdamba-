@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { MapPin, ShieldCheck, Check, MessageCircle, X, Loader2, ExternalLink, UserPlus } from "lucide-react";
-import { shareSos, getContacts } from "../lib/api";
+import { shareSos, getContacts, buildSmsUri } from "../lib/api";
+import { useUser } from "../context/UserContext";
 
 const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
+  const { firstName } = useUser();
   const [stage, setStage] = useState("locating"); // locating | sharing | shared | error | nocontacts
   const [result, setResult] = useState(null);
 
@@ -28,6 +30,7 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
           lng: coords?.longitude ?? null,
           accuracy: coords?.accuracy ?? null,
           channel: "sms",
+          reason: "sos",
         });
         setResult(data);
         setStage("shared");
@@ -50,6 +53,13 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
 
   const busy = stage === "locating" || stage === "sharing";
   const recipients = result?.recipients || [];
+  const sentCount = recipients.filter((r) => r.status === "sent").length;
+  const needsPhoneSms = result && (result.delivery !== "twilio" || sentCount < recipients.length);
+  const statusChip = {
+    sent: { cls: "text-[#2F6B4A] bg-[#E4EEE2]", label: "Sent" },
+    failed: { cls: "text-[#C1452A] bg-[#FBEAE3]", label: "Failed" },
+    not_sent: { cls: "text-[#B07A1E] bg-[#FBF1DE]", label: "Send from phone" },
+  };
 
   return (
     <div className="flex flex-col h-full saathi-shell">
@@ -76,7 +86,7 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
               <Loader2 className="h-5 w-5 animate-spin text-[#E5603C]" />
               {stage === "locating" ? "Getting your location…" : "Alerting your circle…"}
             </h2>
-            <p className="text-[14px] text-[#6B7A77] mt-2 max-w-[280px]">Hang tight, Priya. We&apos;re sending your live location to your trusted contacts.</p>
+            <p className="text-[14px] text-[#6B7A77] mt-2 max-w-[280px]">Hang tight{firstName ? `, ${firstName}` : ""}. We&apos;re sending your live location to your trusted contacts.</p>
           </>
         )}
 
@@ -92,8 +102,18 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
 
         {stage === "shared" && (
           <div className="float-up w-full">
-            <h2 className="text-[22px] font-extrabold text-[#1B2A28]">Alert sent</h2>
-            <p className="text-[14px] text-[#6B7A77] mt-2">Your live location was shared with {recipients.length} trusted contact{recipients.length !== 1 ? "s" : ""}.</p>
+            <h2 className="text-[22px] font-extrabold text-[#1B2A28]">{sentCount > 0 ? "Alert sent" : "Alert ready to send"}</h2>
+            <p className="text-[14px] text-[#6B7A77] mt-2">
+              {sentCount > 0
+                ? `Text message with your live location delivered to ${sentCount} of ${recipients.length} trusted contact${recipients.length !== 1 ? "s" : ""}.`
+                : "Tap below to text your live location to your trusted contacts from your phone."}
+            </p>
+            {needsPhoneSms && (
+              <a href={buildSmsUri(recipients.filter((r) => r.status !== "sent").map((r) => r.phone), result.message)}
+                className="mt-4 w-full rounded-2xl bg-[#E5603C] text-white py-3.5 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#d9542f] transition-colors">
+                <MessageCircle className="h-5 w-5" /> Send SMS from my phone
+              </a>
+            )}
 
             {/* Recipients */}
             <div className="mt-4 bg-white rounded-2xl border border-[#EFE7DB] divide-y divide-[#F1EADF] text-left">
@@ -104,14 +124,14 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
                     <p className="text-[13.5px] font-semibold text-[#1B2A28] truncate">{r.name}</p>
                     <p className="text-[11.5px] text-[#6B7A77]">{r.phone}</p>
                   </div>
-                  <span className="text-[11px] font-bold text-[#2F6B4A] bg-[#E4EEE2] rounded-full px-2.5 py-1 flex items-center gap-1"><Check className="h-3 w-3" /> Sent</span>
+                  <span title={r.error || ""} className={`text-[11px] font-bold rounded-full px-2.5 py-1 flex items-center gap-1 ${(statusChip[r.status] || statusChip.not_sent).cls}`}>{r.status === "sent" && <Check className="h-3 w-3" />} {(statusChip[r.status] || statusChip.not_sent).label}</span>
                 </div>
               ))}
             </div>
 
             {/* Message preview */}
             <div className="mt-3 text-left">
-              <p className="text-[12px] font-semibold text-[#6B7A77] mb-1.5 px-1">Message sent</p>
+              <p className="text-[12px] font-semibold text-[#6B7A77] mb-1.5 px-1">Message</p>
               <div className="bg-[#E4EEE2] rounded-2xl rounded-bl-md p-3.5 text-[13px] text-[#14433A] leading-snug">
                 {result?.message}
               </div>
@@ -120,7 +140,9 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
               </a>
             </div>
 
-            <p className="text-[11px] text-[#9AA7A3] mt-3">Demo mode — delivery is simulated. Connect Twilio to send real SMS/WhatsApp.</p>
+            {result?.nearest_police && (
+              <p className="text-[12px] text-[#6B7A77] mt-3">Nearest police: <span className="font-semibold text-[#1B2A28]">{result.nearest_police.name}</span> ({result.nearest_police.distance_m} m)</p>
+            )}
 
             <div className="mt-6 space-y-3 pb-4">
               <button onClick={onTalk} className="w-full rounded-2xl bg-[#E5603C] text-white py-4 text-[15px] font-bold flex items-center justify-center gap-2 shadow-[0_12px_28px_-10px_rgba(229,96,60,0.6)] hover:bg-[#d9542f] transition-colors">

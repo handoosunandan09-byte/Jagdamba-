@@ -1,13 +1,15 @@
 import React from "react";
-import { quickActions, emergencyContacts } from "../mock";
+import { quickActions, emergencyContacts } from "../config";
+import { useUser } from "../context/UserContext";
 import { Phone, Navigation, Radar, ChevronRight, Box } from "lucide-react";
 
 const HomeScreen = ({ onNavigate }) => {
+  const { firstName, place } = useUser();
   return (
     <div className="px-5 pb-6 float-up">
       <div className="mt-1 mb-4">
         <h2 className="text-[30px] leading-[1.12] font-extrabold tracking-tight text-[#2A2A22]">
-          How can <span className="text-[#2F6B4A]">Jagdamba</span><br />help you?
+          {firstName ? `Hi ${firstName}, how` : "How"} can <span className="text-[#2F6B4A]">Jagdamba</span><br />help you?
         </h2>
         <p className="mt-2.5 text-[14px] text-[#6E6A5E] max-w-[300px]">
           Just tell us what happened and we&apos;ll find you the best help.
@@ -24,7 +26,7 @@ const HomeScreen = ({ onNavigate }) => {
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-[15px] font-bold leading-tight">Guardian City · 3D Map</p>
-          <p className="text-[12px] text-white/85 mt-0.5 leading-snug">Explore the live 3D safety map of Bengaluru</p>
+          <p className="text-[12px] text-white/85 mt-0.5 leading-snug">Explore the live 3D safety map around {place?.city || "you"}</p>
         </div>
         <ChevronRight className="h-5 w-5 shrink-0" />
       </button>

@@ -3,6 +3,8 @@ import ScreenHeader from "./ScreenHeader";
 import { useCrashDetection } from "../hooks/useCrashDetection";
 import { shareSos, getContacts } from "../lib/api";
 import { toast } from "sonner";
+import SosRecipients from "./SosRecipients";
+import { useUser } from "../context/UserContext";
 import { Radar, ShieldCheck, Zap, Check, MapPin, ExternalLink, TriangleAlert, Loader2, Car, Activity } from "lucide-react";
 
 const COUNTDOWN = 15;
@@ -45,6 +47,7 @@ const useAlarm = () => {
 };
 
 const GuardianScreen = ({ onBack }) => {
+  const { firstName } = useUser();
   const [phase, setPhase] = useState("idle"); // idle | armed | alert | sending | sent | error
   const [count, setCount] = useState(COUNTDOWN);
   const [impactG, setImpactG] = useState(0);
@@ -74,6 +77,7 @@ const GuardianScreen = ({ onBack }) => {
           lng: coords?.longitude ?? null,
           accuracy: coords?.accuracy ?? null,
           channel: "sms",
+          reason: "crash",
         });
         setResult(data);
         setPhase("sent");
@@ -222,7 +226,7 @@ const GuardianScreen = ({ onBack }) => {
               <TriangleAlert className="h-5 w-5" />
               <h2 className="text-[20px] font-extrabold">Possible accident detected</h2>
             </div>
-            <p className="text-[14px] text-[#6E6A5E] max-w-[280px]">Impact of ~{impactG.toFixed(1)}g detected. Are you okay, Priya? We&apos;ll alert your contacts automatically if you don&apos;t respond.</p>
+            <p className="text-[14px] text-[#6E6A5E] max-w-[280px]">Impact of ~{impactG.toFixed(1)}g detected. Are you okay{firstName ? `, ${firstName}` : ""}? We&apos;ll alert your contacts automatically if you don&apos;t respond.</p>
 
             <div className="w-full mt-7 space-y-3">
               <button onClick={imOk} className="w-full rounded-2xl bg-[#2F6B4A] text-white py-4 text-[16px] font-bold hover:bg-[#285C40] transition-colors">
@@ -249,25 +253,13 @@ const GuardianScreen = ({ onBack }) => {
               <Check className="h-10 w-10" strokeWidth={2.4} />
             </span>
             <h2 className="text-[22px] font-extrabold text-[#2A2A22]">Emergency alert sent</h2>
-            <p className="text-[14px] text-[#6E6A5E] mt-2">We detected an accident and alerted {recipients.length} contact{recipients.length !== 1 ? "s" : ""} with your live location.</p>
+            <p className="text-[14px] text-[#6E6A5E] mt-2">We detected a possible accident. {recipients.filter((r) => r.status === "sent").length} of {recipients.length} contact{recipients.length !== 1 ? "s" : ""} received a text with your live location.</p>
 
-            <div className="mt-4 w-full bg-white rounded-2xl border border-[#E7E0D1] divide-y divide-[#F1EADF] text-left">
-              {recipients.map((r, i) => (
-                <div key={i} className="flex items-center gap-3 p-3">
-                  <span className="h-9 w-9 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center font-bold text-[13px]">{r.name.trim().charAt(0).toUpperCase()}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13.5px] font-semibold text-[#2A2A22] truncate">{r.name}</p>
-                    <p className="text-[11.5px] text-[#6E6A5E]">{r.phone}</p>
-                  </div>
-                  <span className="text-[11px] font-bold text-[#2F6B4A] bg-[#E4EEE2] rounded-full px-2.5 py-1 flex items-center gap-1"><Check className="h-3 w-3" /> Sent</span>
-                </div>
-              ))}
-            </div>
+            <SosRecipients result={result} />
             <a href={result?.maps_link} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-[13px] font-semibold text-[#2F6B4A] bg-white border border-[#E7E0D1] rounded-full px-4 py-2 hover:bg-[#F3ECE1] transition-colors">
               <MapPin className="h-4 w-4" /> Open shared location <ExternalLink className="h-3.5 w-3.5" />
             </a>
-            <p className="text-[11px] text-[#9A9684] mt-3">Demo mode — delivery is simulated. Connect Twilio to send real SMS/WhatsApp.</p>
-            <button onClick={onBack} className="w-full mt-6 rounded-2xl bg-[#2F6B4A] text-white py-4 text-[15px] font-bold hover:bg-[#285C40] transition-colors">Done</button>
+                        <button onClick={onBack} className="w-full mt-6 rounded-2xl bg-[#2F6B4A] text-white py-4 text-[15px] font-bold hover:bg-[#285C40] transition-colors">Done</button>
           </div>
         )}
 

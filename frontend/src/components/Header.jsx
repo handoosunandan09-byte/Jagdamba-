@@ -1,8 +1,9 @@
 import React from "react";
-import { currentUser } from "../mock";
+import { useUser } from "../context/UserContext";
 import { ShieldCheck } from "lucide-react";
 
-const Header = () => {
+const Header = ({ onProfile }) => {
+  const { profile } = useUser();
   return (
     <header className="flex items-center justify-between px-5 pt-5 pb-3">
       <div className="flex items-center gap-2.5">
@@ -14,8 +15,9 @@ const Header = () => {
       <button
         className="h-9 w-9 rounded-full bg-[#E4EEE2] text-[#2F6B4A] text-[12px] font-bold flex items-center justify-center hover:bg-[#d7e6d4] transition-colors"
         aria-label="Profile avatar"
+        onClick={onProfile}
       >
-        {currentUser.initials}
+        {profile?.initials}
       </button>
     </header>
   );

@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import ScreenHeader from "./ScreenHeader";
-import { saathiIntro } from "../mock";
+import { useUser } from "../context/UserContext";
 import { sendChat, getSessionId } from "../lib/api";
 import { useVoiceInput } from "../hooks/useVoiceInput";
 import { Send, Mic, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 const TalkScreen = ({ onBack, emergency }) => {
-  const [messages, setMessages] = useState([{ from: "saathi", text: saathiIntro }]);
+  const { firstName, coords } = useUser();
+  const intro = `Hi${firstName ? ` ${firstName}` : ""}, I'm Jagdamba — your community safety companion. Tell me what's happening and I'll guide you to the right help. If you're in immediate danger, tap the red button or call 112.`;
+  const [messages, setMessages] = useState([{ from: "saathi", text: intro }]);
   const [input, setInput] = useState(emergency ? "I need help right now" : "");
   const [typing, setTyping] = useState(false);
   const scrollRef = useRef(null);
@@ -26,7 +28,7 @@ const TalkScreen = ({ onBack, emergency }) => {
     setInput("");
     setTyping(true);
     try {
-      const reply = await sendChat(sessionId, text);
+      const reply = await sendChat(sessionId, text, coords);
       setMessages((m) => [...m, { from: "saathi", text: reply }]);
     } catch (e) {
       setMessages((m) => [

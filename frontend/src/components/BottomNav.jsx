@@ -1,8 +1,9 @@
 import React from "react";
-import { navItems } from "../mock";
-import { currentUser } from "../mock";
+import { navItems } from "../config";
+import { useUser } from "../context/UserContext";
 
 const BottomNav = ({ active, onNavigate }) => {
+  const { profile } = useUser();
   return (
     <nav className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-[#E7E0D1] px-2 pt-2 pb-3">
       <div className="flex items-center justify-around">
@@ -26,7 +27,7 @@ const BottomNav = ({ active, onNavigate }) => {
                     isActive ? "bg-[#2F6B4A] text-white" : "bg-[#E9E6DA] text-[#A3A090]"
                   }`}
                 >
-                  {currentUser.initials}
+                  {profile?.initials}
                 </span>
               )}
               <span className={`text-[10.5px] font-semibold transition-colors ${isActive ? "text-[#2F6B4A]" : "text-[#A3A090]"}`}>
