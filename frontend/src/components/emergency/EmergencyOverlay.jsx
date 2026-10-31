@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useEmergency } from "../../context/EmergencyContext";
+import { whatsappUrl } from "../../lib/api";
 import {
   ShieldAlert, X, Phone, MapPin, Video, VideoOff, EyeOff, Eye,
-  BatteryMedium, Signal, Loader2, Share2, Check,
+  BatteryMedium, Signal, Loader2, Share2, Check, Send,
 } from "lucide-react";
 
 // ---- Abort countdown (false-alarm window before alerts fire) ----
@@ -140,7 +141,7 @@ const CrisisMode = () => {
             {recording ? "RECORDING LIVE EVIDENCE" : "EVIDENCE CAPTURE STARTING…"}
           </p>
           <p className="flex items-center gap-2">
-            🚨 {dispatching ? "SENDING ALERTS…" : sentCount > 0 ? `TEXT SENT TO ${sentCount} OF ${recipientCount} TRUSTED CONTACT${recipientCount !== 1 ? "S" : ""}` : "TAP SHARE LOCATION TO TEXT YOUR CONTACTS"}
+            🚨 {dispatching ? "SENDING ALERTS…" : sentCount > 0 ? `TEXT SENT TO ${sentCount} OF ${recipientCount} TRUSTED CONTACT${recipientCount !== 1 ? "S" : ""}` : "TAP WHATSAPP BELOW TO ALERT YOUR CONTACTS"}
           </p>
           {police && (
             <p className="flex items-center gap-2">
@@ -175,6 +176,16 @@ const CrisisMode = () => {
 
       {/* Action bar */}
       <div className="bg-[#1A0606] p-4 space-y-2.5">
+        {r?.recipients?.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {r.recipients.map((c, i) => (
+              <a key={i} href={whatsappUrl(c.phone, r.message)} target="_blank" rel="noreferrer"
+                className="shrink-0 rounded-xl bg-[#25D366] text-white px-3.5 py-2.5 text-[13px] font-bold flex items-center gap-1.5 hover:bg-[#1EBE5A] transition-colors">
+                <Send className="h-4 w-4" /> WhatsApp {c.name.split(" ")[0]}
+              </a>
+            ))}
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-2.5">
           <a href="tel:112" className="rounded-xl bg-[#DC2626] text-white py-3.5 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#B91C1C] transition-colors">
             <Phone className="h-4 w-4" /> Call 112
