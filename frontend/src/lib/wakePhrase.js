@@ -1,4 +1,4 @@
-// Matching for the spoken SOS phrase "Jagdamba, I need help".
+// Matching for the spoken SOS phrase "Jagdamba, I need help" (or just "Bachao").
 // Speech recognisers spell the name many ways ("Jagadamba", "jag damba",
 // "Jagdambe", "Jagdambha"…), and people may say it in Hindi, so we look for
 // the name plus a help word anywhere in what was heard.
@@ -13,9 +13,13 @@ export const normalise = (text) =>
     .replace(/\s+/g, " ")
     .trim();
 
+// "Bachao" is distinctive enough to start SOS on its own, without the name
+const BACHAO = /\bba+cha+[ou]+\b|\bbachaav\b|\bbacha lo\b|बचाओ|बचा लो/i;
+export const hasBachao = (text) => BACHAO.test(normalise(text));
+
 export const isWakePhrase = (text) => {
   const t = normalise(text);
-  return NAME.test(t) && HELP.test(t);
+  return (NAME.test(t) && HELP.test(t)) || BACHAO.test(t);
 };
 
 // Just the name ("Jagdamba") — wakes the assistant orb.
