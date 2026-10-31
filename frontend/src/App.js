@@ -16,6 +16,7 @@ import GuardianScreen from "./components/GuardianScreen";
 import { EmergencyProvider } from "./context/EmergencyContext";
 import { UserProvider, useUser } from "./context/UserContext";
 import OnboardingScreen from "./components/OnboardingScreen";
+import { VoiceGuardProvider } from "./context/VoiceGuardContext";
 import SOSDistressTrigger from "./components/emergency/SOSDistressTrigger";
 import EmergencyOverlay from "./components/emergency/EmergencyOverlay";
 
@@ -100,6 +101,8 @@ function AppShell() {
 
   return (
     <EmergencyProvider>
+      {/* Talk screen uses the microphone for dictation, so pause hands-free SOS there */}
+      <VoiceGuardProvider paused={screen === "talk"}>
       <div className="App min-h-screen w-full flex items-center justify-center bg-[#EFE9E0] sm:py-6">
         {/* Mobile frame */}
         <div className="relative w-full sm:max-w-[440px] h-screen sm:h-[900px] sm:rounded-[2.2rem] sm:border sm:border-[#E4DCCF] overflow-hidden saathi-shell sm:shadow-[0_30px_80px_-30px_rgba(27,42,40,0.4)]">
@@ -134,6 +137,7 @@ function AppShell() {
           <Toaster position="top-center" richColors toastOptions={{ style: { borderRadius: "16px" } }} />
         </div>
       </div>
+      </VoiceGuardProvider>
     </EmergencyProvider>
   );
 }
