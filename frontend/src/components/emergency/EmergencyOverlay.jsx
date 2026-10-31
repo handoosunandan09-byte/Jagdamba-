@@ -38,18 +38,18 @@ const PinDialog = ({ onClose }) => {
     <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/60 px-8">
       <div className="w-full bg-white rounded-2xl p-5 pop-in">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="text-[16px] font-extrabold text-[#1E293B]">Enter PIN to cancel</h3>
+          <h3 className="text-[16px] font-extrabold text-[#1E293B]">{pin ? "Enter PIN to cancel" : "Cancel the alert?"}</h3>
           <button onClick={onClose} className="h-8 w-8 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#64748B]"><X className="h-4 w-4" /></button>
         </div>
-        <p className="text-[12px] text-[#64748B] mb-3">This stops recording &amp; closes the alert. (Demo PIN: {pin})</p>
-        <input
+        <p className="text-[12px] text-[#64748B] mb-3">This stops recording &amp; closes the alert.{!pin && " Set a cancel PIN in Profile → Edit profile so no one else can stop it."}</p>
+        {pin && <input
           value={val}
           onChange={(e) => { setVal(e.target.value); setErr(false); }}
           type="password"
           inputMode="numeric"
           placeholder="••••"
           className={`w-full text-center tracking-[0.5em] text-[20px] font-bold rounded-xl border py-3 outline-none ${err ? "border-[#DC2626] bg-[#FEF2F2]" : "border-[#E2E8F0]"}`}
-        />
+        />}
         {err && <p className="text-[12px] text-[#DC2626] mt-1.5 text-center">Incorrect PIN</p>}
         <button onClick={submit} className="w-full mt-4 rounded-xl bg-[#1E293B] text-white py-3 text-[15px] font-bold hover:bg-[#0F172A] transition-colors">Confirm cancel</button>
       </div>
@@ -116,6 +116,7 @@ const CrisisMode = () => {
   const r = dispatchResult;
   const police = r?.nearest_police;
   const recipientCount = r?.recipients?.length ?? 0;
+  const sentCount = (r?.recipients || []).filter((x) => x.status === "sent").length;
 
   const shareNow = async () => {
     if (!r) return;
@@ -139,7 +140,7 @@ const CrisisMode = () => {
             {recording ? "RECORDING LIVE EVIDENCE" : "EVIDENCE CAPTURE STARTING…"}
           </p>
           <p className="flex items-center gap-2">
-            🚨 {dispatching ? "SENDING ALERTS…" : `ALERTS SENT TO ${recipientCount} TRUSTED CONTACT${recipientCount !== 1 ? "S" : ""} & 112 DISPATCH`}
+            🚨 {dispatching ? "SENDING ALERTS…" : sentCount > 0 ? `TEXT SENT TO ${sentCount} OF ${recipientCount} TRUSTED CONTACT${recipientCount !== 1 ? "S" : ""}` : "TAP SHARE LOCATION TO TEXT YOUR CONTACTS"}
           </p>
           {police && (
             <p className="flex items-center gap-2">
