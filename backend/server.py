@@ -23,6 +23,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uuid
+import json
 from datetime import datetime, timezone, timedelta
 
 import httpx
@@ -73,6 +74,11 @@ TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
 TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER', '')          # e.g. +15017122661
 TWILIO_MESSAGING_SERVICE_SID = os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '')
+# Automatic WhatsApp alerts. Sandbox sender is whatsapp:+14155238886 (or just +14155238886).
+TWILIO_WHATSAPP_FROM = os.environ.get('TWILIO_WHATSAPP_FROM', '').strip()
+# Optional approved WhatsApp template (Twilio Content SID, HX...). Needed to message a contact
+# who hasn't written to your WhatsApp number in the last 24 hours. Variables: 1=name, 2=reason, 3=location link
+TWILIO_WHATSAPP_CONTENT_SID = os.environ.get('TWILIO_WHATSAPP_CONTENT_SID', '').strip()
 DEFAULT_COUNTRY_CODE = os.environ.get('DEFAULT_COUNTRY_CODE', '+91')
 
 OVERPASS_URLS = [u.strip() for u in os.environ.get(
@@ -371,8 +377,54 @@ def to_e164(phone: str) -> Optional[str]:
     return f"{DEFAULT_COUNTRY_CODE}{digits}"
 
 
+def _twilio_creds() -> bool:
+    return bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN)
+
+
+def sms_configured() -> bool:
+    return _twilio_creds() and bool(TWILIO_FROM_NUMBER or TWILIO_MESSAGING_SERVICE_SID)
+
+
+def whatsapp_configured() -> bool:
+    return _twilio_creds() and bool(TWILIO_WHATSAPP_FROM)
+
+
 def twilio_configured() -> bool:
-    return bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and (TWILIO_FROM_NUMBER or TWILIO_MESSAGING_SERVICE_SID))
+    return sms_configured() or whatsapp_configured()
+
+
+TWILIO_MESSAGES_URL = "https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
+
+# Twilio error codes worth explaining in plain words
+TWILIO_HINTS = {
+    63016: "WhatsApp only allows this message within 24 hours of the contact messaging your Twilio WhatsApp number. "
+           "Ask them to send the sandbox join message again, or set up an approved template.",
+    63015: "This contact hasn't joined your Twilio WhatsApp sandbox yet. They need to send the join code first.",
+    63003: "This number isn't on WhatsApp.",
+    21608: "Twilio trial accounts can only send to verified numbers.",
+    21211: "The phone number is invalid.",
+}
+
+
+def _twilio_error(payload: dict, fallback: str) -> str:
+    code = payload.get('code') or payload.get('error_code')
+    try:
+        code = int(code) if code is not None else None
+    except (TypeError, ValueError):
+        code = None
+    return TWILIO_HINTS.get(code) or payload.get('message') or payload.get('error_message') or fallback
+
+
+async def _twilio_post(http: httpx.AsyncClient, data: dict) -> Dict[str, Any]:
+    try:
+        r = await http.post(TWILIO_MESSAGES_URL.format(sid=TWILIO_ACCOUNT_SID), data=data,
+                            auth=(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN))
+        payload = r.json() if r.content else {}
+        if r.status_code >= 400:
+            return {"status": "failed", "error": _twilio_error(payload, f"HTTP {r.status_code}")}
+        return {"status": "sent", "sid": payload.get('sid')}
+    except Exception as e:
+        return {"status": "failed", "error": str(e)}
 
 
 async def send_sms(http: httpx.AsyncClient, to: str, body: str) -> Dict[str, Any]:
@@ -384,17 +436,39 @@ async def send_sms(http: httpx.AsyncClient, to: str, body: str) -> Dict[str, Any
         data["MessagingServiceSid"] = TWILIO_MESSAGING_SERVICE_SID
     else:
         data["From"] = TWILIO_FROM_NUMBER
+    return await _twilio_post(http, data)
+
+
+async def send_whatsapp(http: httpx.AsyncClient, to: str, body: str, variables: Dict[str, str]) -> Dict[str, Any]:
+    number = to_e164(to)
+    if not number:
+        return {"status": "failed", "error": "Invalid phone number"}
+    sender = TWILIO_WHATSAPP_FROM if TWILIO_WHATSAPP_FROM.startswith("whatsapp:") else f"whatsapp:{TWILIO_WHATSAPP_FROM}"
+    data = {"To": f"whatsapp:{number}", "From": sender}
+    if TWILIO_WHATSAPP_CONTENT_SID:
+        data["ContentSid"] = TWILIO_WHATSAPP_CONTENT_SID
+        data["ContentVariables"] = json.dumps(variables)
+    else:
+        data["Body"] = body
+    return await _twilio_post(http, data)
+
+
+async def confirm_delivery(http: httpx.AsyncClient, result: Dict[str, Any]) -> Dict[str, Any]:
+    """WhatsApp failures (e.g. outside the 24h window) arrive a moment after Twilio accepts
+    the message, so look the message up once to report the real outcome."""
+    if result.get("status") != "sent" or not result.get("sid"):
+        return result
     try:
-        r = await http.post(
-            f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
-            data=data, auth=(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN),
+        r = await http.get(
+            f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages/{result['sid']}.json",
+            auth=(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN),
         )
         payload = r.json() if r.content else {}
-        if r.status_code >= 400:
-            return {"status": "failed", "error": payload.get('message') or f"HTTP {r.status_code}"}
-        return {"status": "sent", "sid": payload.get('sid')}
-    except Exception as e:
-        return {"status": "failed", "error": str(e)}
+        if payload.get("status") in ("failed", "undelivered"):
+            return {"status": "failed", "sid": result["sid"], "error": _twilio_error(payload, "Message was not delivered")}
+    except Exception:
+        pass
+    return result
 
 
 # ----------------- Models -----------------
@@ -477,8 +551,9 @@ class SosCreate(BaseModel):
 class SosRecipient(BaseModel):
     name: str
     phone: str
-    status: str = "sent"  # sent | failed | not_sent
+    status: str = "sent"  # sent (on at least one channel) | failed | not_sent
     error: Optional[str] = None
+    channels: Dict[str, str] = {}  # e.g. {"whatsapp": "sent", "sms": "failed"}
 
 
 class SosResponse(BaseModel):
@@ -512,7 +587,8 @@ async def root():
         "database": "ok" if DB_ERROR is None else f"error: {DB_ERROR}",
         "integrations": {
             "gemini": bool(GEMINI_API_KEY or (HAS_EMERGENT and EMERGENT_LLM_KEY)),
-            "twilio_sms": twilio_configured(),
+            "twilio_sms": sms_configured(),
+            "twilio_whatsapp": whatsapp_configured(),
             "openstreetmap": True,
         },
     }
@@ -520,7 +596,7 @@ async def root():
 
 @api_router.get("/config")
 async def config():
-    return {"twilio_sms": twilio_configured(), "gemini": bool(GEMINI_API_KEY or (HAS_EMERGENT and EMERGENT_LLM_KEY))}
+    return {"twilio_sms": sms_configured(), "twilio_whatsapp": whatsapp_configured(), "gemini": bool(GEMINI_API_KEY or (HAS_EMERGENT and EMERGENT_LLM_KEY))}
 
 
 # ----------------- Routes: profile -----------------
@@ -730,16 +806,34 @@ async def create_sos(payload: SosCreate, request: Request):
     delivery = "twilio" if twilio_configured() else "not_configured"
     recipients: List[SosRecipient] = []
     if delivery == "twilio" and contacts:
+        variables = {"1": name, "2": reason, "3": maps_link or (landmark or "location unavailable")}
         async with httpx.AsyncClient(timeout=15) as http:
-            results = await asyncio.gather(*[send_sms(http, c.phone, message) for c in contacts])
-        for c, res in zip(contacts, results):
-            recipients.append(SosRecipient(name=c.name, phone=c.phone, status=res['status'], error=res.get('error')))
+            async def deliver(c: Contact):
+                channels: Dict[str, Dict[str, Any]] = {}
+                jobs = []
+                if whatsapp_configured():
+                    jobs.append(("whatsapp", send_whatsapp(http, c.phone, message, variables)))
+                if sms_configured():
+                    jobs.append(("sms", send_sms(http, c.phone, message)))
+                results = await asyncio.gather(*[j for _, j in jobs])
+                for (ch, _), res in zip(jobs, results):
+                    channels[ch] = res
+                if "whatsapp" in channels:
+                    await asyncio.sleep(2.5)
+                    channels["whatsapp"] = await confirm_delivery(http, channels["whatsapp"])
+                ok = any(r["status"] == "sent" for r in channels.values())
+                errors = "; ".join(f"{ch}: {r['error']}" for ch, r in channels.items() if r.get("error"))
+                return SosRecipient(
+                    name=c.name, phone=c.phone, status="sent" if ok else "failed",
+                    error=errors or None, channels={ch: r["status"] for ch, r in channels.items()},
+                )
+            recipients = list(await asyncio.gather(*[deliver(c) for c in contacts]))
     else:
         recipients = [SosRecipient(name=c.name, phone=c.phone, status="not_sent") for c in contacts]
 
     doc = {
         "id": sos_id, "device_id": did, "lat": payload.lat, "lng": payload.lng, "accuracy": payload.accuracy,
-        "channel": "sms", "delivery": delivery, "maps_link": maps_link, "message": message,
+        "channel": "whatsapp" if whatsapp_configured() else "sms", "delivery": delivery, "maps_link": maps_link, "message": message,
         "recipients": [r.dict() for r in recipients], "battery": payload.battery, "network": payload.network,
         "landmark": landmark, "evidence_id": payload.evidence_id, "reason": payload.reason,
         "nearest_police": nearest_police, "shared_at": datetime.now(timezone.utc),
@@ -748,7 +842,7 @@ async def create_sos(payload: SosCreate, request: Request):
     sent = sum(1 for r in recipients if r.status == 'sent')
     logger.info(f"SOS {sos_id}: delivery={delivery}, sent {sent}/{len(recipients)}")
     return SosResponse(
-        id=sos_id, maps_link=maps_link or "https://www.google.com/maps", message=message, channel="sms",
+        id=sos_id, maps_link=maps_link or "https://www.google.com/maps", message=message, channel="whatsapp" if whatsapp_configured() else "sms",
         delivery=delivery, recipients=recipients, shared_at=doc["shared_at"], nearest_police=nearest_police,
         battery=payload.battery, network=payload.network, landmark=landmark,
     )
