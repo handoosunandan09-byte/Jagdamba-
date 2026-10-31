@@ -1,6 +1,7 @@
 import React from "react";
 import { quickActions, emergencyContacts } from "../config";
 import { useUser } from "../context/UserContext";
+import VoiceSosCard from "./VoiceSosCard";
 import { Phone, Navigation, Radar, ChevronRight, Box } from "lucide-react";
 
 const HomeScreen = ({ onNavigate }) => {
@@ -58,6 +59,9 @@ const HomeScreen = ({ onNavigate }) => {
           </button>
         </div>
       </div>
+
+      {/* Hands-free SOS */}
+      <VoiceSosCard />
 
       {/* Quick action cards */}
       <div className="grid grid-cols-2 gap-3.5 mt-5">
