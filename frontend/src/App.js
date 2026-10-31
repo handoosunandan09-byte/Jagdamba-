@@ -16,7 +16,9 @@ import GuardianScreen from "./components/GuardianScreen";
 import { EmergencyProvider } from "./context/EmergencyContext";
 import { UserProvider, useUser } from "./context/UserContext";
 import OnboardingScreen from "./components/OnboardingScreen";
+import PermissionsScreen, { permsDone } from "./components/PermissionsScreen";
 import { VoiceGuardProvider } from "./context/VoiceGuardContext";
+import VoiceOrb from "./components/VoiceOrb";
 import SOSDistressTrigger from "./components/emergency/SOSDistressTrigger";
 import EmergencyOverlay from "./components/emergency/EmergencyOverlay";
 
@@ -28,7 +30,7 @@ const TABS = ["home", "nearby", "alerts", "profile"];
 
 function AppShell() {
   const { profileStatus, reloadProfile } = useUser();
-  const [screen, setScreen] = useState("home");
+  const [screen, setScreen] = useState(() => (permsDone() ? "home" : "permissions"));
   const [screenProps, setScreenProps] = useState({});
 
   const navigate = (next, props = {}) => {
@@ -65,6 +67,10 @@ function AppShell() {
         return <NearbyScreen onBack={goHome} onOpenMap={() => navigate("guardianmap")} />;
       case "alerts":
         return <AlertsScreen onReport={() => navigate("report")} />;
+      case "permissions":
+        return <PermissionsScreen onDone={goHome} />;
+      case "apppermissions":
+        return <PermissionsScreen onDone={() => navigate("profile")} onBack={() => navigate("profile")} />;
       case "editprofile":
         return <OnboardingScreen onDone={() => navigate("profile")} onBack={() => navigate("profile")} />;
       case "profile":
@@ -116,6 +122,9 @@ function AppShell() {
 
           {/* Persistent one-touch emergency trigger (tab screens only) */}
           {showChrome && <SOSDistressTrigger />}
+
+          {/* Siri-style Voice SOS orb (visible whenever Voice SOS is on) */}
+          <VoiceOrb />
 
           {/* Guardian City 3D map — full-bleed overlay, lazily mounted */}
           {screen === "guardianmap" && (
