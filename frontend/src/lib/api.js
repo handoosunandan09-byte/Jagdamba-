@@ -3,42 +3,87 @@ import axios from "axios";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
-export const sendChat = async (sessionId, message) => {
-  const { data } = await axios.post(`${API}/chat`, { session_id: sessionId, message });
+// Stable per-browser id. Profile, contacts and SOS history are scoped to it.
+export const getDeviceId = () => {
+  let id = null;
+  try { id = localStorage.getItem("jagdamba_device"); } catch (e) { /* storage blocked */ }
+  if (!id) {
+    id = (window.crypto?.randomUUID?.() || `dev-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`);
+    try { localStorage.setItem("jagdamba_device", id); } catch (e) { /* noop */ }
+  }
+  return id;
+};
+
+const http = axios.create({ baseURL: API, timeout: 30000 });
+http.interceptors.request.use((cfg) => {
+  cfg.headers = { ...(cfg.headers || {}), "X-Device-Id": getDeviceId() };
+  return cfg;
+});
+
+// ---- Profile ----
+export const getProfile = async () => {
+  try {
+    const { data } = await http.get("/profile");
+    return data;
+  } catch (e) {
+    if (e.response?.status === 404) return null;
+    throw e;
+  }
+};
+export const saveProfile = async (payload) => (await http.put("/profile", payload)).data;
+
+// ---- Assistant ----
+export const sendChat = async (sessionId, message, coords) => {
+  const { data } = await http.post("/chat", {
+    session_id: sessionId, message, lat: coords?.lat ?? null, lng: coords?.lng ?? null,
+  });
   return data.reply;
 };
 
-export const submitReport = async (payload) => {
-  const { data } = await axios.post(`${API}/reports`, payload);
-  return data;
-};
+// ---- Reports / alerts ----
+export const submitReport = async (payload) => (await http.post("/reports", payload)).data;
+export const getAlerts = async ({ lat, lng, radius = 5000, days = 14 }) =>
+  (await http.get("/alerts", { params: { lat, lng, radius, days } })).data.alerts;
 
-export const shareSos = async (payload) => {
-  const { data } = await axios.post(`${API}/sos`, payload);
-  return data;
-};
+// ---- Places / geo ----
+export const getNearby = async ({ lat, lng, radius = 3000, types }) =>
+  (await http.get("/nearby", { params: { lat, lng, radius, ...(types ? { types } : {}) } })).data.places;
+export const reverseGeocode = async (lat, lng) => (await http.get("/geo/reverse", { params: { lat, lng } })).data;
+export const getBuildingSummary = async (params) => (await http.get("/spatial/building-summary", { params })).data;
+export const getSafeRoutes = async ({ from, to }) =>
+  (await http.get("/routes", {
+    params: { from_lat: from.lat, from_lng: from.lng, to_lat: to.lat, to_lng: to.lng },
+  })).data.routes;
 
-export const getContacts = async () => {
-  const { data } = await axios.get(`${API}/contacts`);
-  return data;
-};
+// ---- SOS ----
+export const shareSos = async (payload) => (await http.post("/sos", payload)).data;
 
-export const addContact = async (payload) => {
-  const { data } = await axios.post(`${API}/contacts`, payload);
-  return data;
-};
+// ---- Contacts ----
+export const getContacts = async () => (await http.get("/contacts")).data;
+export const addContact = async (payload) => (await http.post("/contacts", payload)).data;
+export const deleteContact = async (id) => (await http.delete(`/contacts/${id}`)).data;
 
-export const deleteContact = async (id) => {
-  const { data } = await axios.delete(`${API}/contacts/${id}`);
-  return data;
-};
-
-// Get a stable per-browser session id for Jagdamba chat
+// Chat session id (per browser)
 export const getSessionId = () => {
-  let id = localStorage.getItem("saathi_session");
+  let id = null;
+  try { id = localStorage.getItem("saathi_session"); } catch (e) { /* noop */ }
   if (!id) {
     id = "sess-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-    localStorage.setItem("saathi_session", id);
+    try { localStorage.setItem("saathi_session", id); } catch (e) { /* noop */ }
   }
   return id;
+};
+
+// Builds a phone SMS link (fallback when server-side SMS isn't configured)
+export const buildSmsUri = (phones, body) => {
+  const to = (phones || []).filter(Boolean).join(",");
+  return `sms:${to}?&body=${encodeURIComponent(body)}`;
+};
+
+export const directionsUrl = (lat, lng) =>
+  `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
+
+export const formatDistance = (m) => {
+  if (m == null) return "";
+  return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 1 : 0)} km`;
 };
