@@ -13,8 +13,8 @@ const VoiceSosCard = () => {
     : error
       ? error
       : enabled
-        ? (listening ? "Listening… say “Jagdamba, I need help”" : "Starting microphone…")
-        : "Say “Jagdamba, I need help” to start SOS hands-free";
+        ? (listening ? "Listening… say “Bachao” or “Jagdamba, I need help”" : "Starting microphone…")
+        : "Say “Bachao” or “Jagdamba, I need help” to start SOS hands-free";
 
   return (
     <div className={`mt-5 rounded-2xl border p-4 transition-colors ${enabled ? "bg-[#FBEAE3] border-[#E5603C]/40" : "bg-white border-[#E7E0D1]"}`}>
@@ -40,7 +40,7 @@ const VoiceSosCard = () => {
       </div>
       {enabled && (
         <p className="text-[11px] text-[#8A8575] mt-2.5 leading-snug">
-          Say “Jagdamba” and the orb answers, or say the full phrase to start SOS straight away. Works while Jagdamba is open on screen; a 3-second countdown lets you cancel a false alarm.
+          Saying “Bachao” or the full phrase starts SOS straight away; saying just “Jagdamba” makes the orb answer. Works while Jagdamba is open on screen; a 3-second countdown lets you cancel a false alarm.
           {heard ? <> Last heard: <span className="italic">&ldquo;{heard.slice(0, 60)}&rdquo;</span></> : null}
         </p>
       )}
