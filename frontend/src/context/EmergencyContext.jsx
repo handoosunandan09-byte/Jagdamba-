@@ -6,7 +6,7 @@ const EmergencyContext = createContext(null);
 export const useEmergency = () => useContext(EmergencyContext);
 
 const ABORT_SECONDS = 3;
-const DEFAULT_PIN = "1234";
+const readPin = () => { try { return localStorage.getItem("saathi_sos_pin") || null; } catch (e) { return null; } };
 
 const vibrate = (pattern) => {
   try { navigator.vibrate && navigator.vibrate(pattern); } catch (e) { /* noop */ }
@@ -25,7 +25,7 @@ export const EmergencyProvider = ({ children }) => {
   const recorder = useEmergencyMediaRecorder();
   const { dispatch } = useSOSDispatch();
 
-  const pin = (typeof localStorage !== "undefined" && localStorage.getItem("saathi_sos_pin")) || DEFAULT_PIN;
+  const pin = readPin(); // set by the user in their profile; null = no PIN required
 
   const activate = useCallback(async () => {
     setPhase("active");
@@ -70,7 +70,7 @@ export const EmergencyProvider = ({ children }) => {
   }, []);
 
   const cancelWithPin = useCallback(async (entered) => {
-    if (entered !== pin) return false;
+    if (pin && entered !== pin) return false;
     clearInterval(countdownTimer.current);
     await recorder.stop();
     setPhase("idle");
