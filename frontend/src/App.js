@@ -14,6 +14,8 @@ import SosScreen from "./components/SosScreen";
 import ContactsScreen from "./components/ContactsScreen";
 import GuardianScreen from "./components/GuardianScreen";
 import { EmergencyProvider } from "./context/EmergencyContext";
+import { UserProvider, useUser } from "./context/UserContext";
+import OnboardingScreen from "./components/OnboardingScreen";
 import SOSDistressTrigger from "./components/emergency/SOSDistressTrigger";
 import EmergencyOverlay from "./components/emergency/EmergencyOverlay";
 
@@ -23,7 +25,8 @@ const GuardianCityMap = lazy(() => import("./components/map/GuardianCityMap"));
 // Tabs that live in the bottom nav
 const TABS = ["home", "nearby", "alerts", "profile"];
 
-function App() {
+function AppShell() {
+  const { profileStatus, reloadProfile } = useUser();
   const [screen, setScreen] = useState("home");
   const [screenProps, setScreenProps] = useState({});
 
@@ -60,7 +63,9 @@ function App() {
       case "nearby":
         return <NearbyScreen onBack={goHome} onOpenMap={() => navigate("guardianmap")} />;
       case "alerts":
-        return <AlertsScreen />;
+        return <AlertsScreen onReport={() => navigate("report")} />;
+      case "editprofile":
+        return <OnboardingScreen onDone={() => navigate("profile")} onBack={() => navigate("profile")} />;
       case "profile":
         return <ProfileScreen onNavigate={navigate} />;
       case "home":
@@ -69,13 +74,37 @@ function App() {
     }
   };
 
+  if (profileStatus !== "ready") {
+    return (
+      <div className="App min-h-screen w-full flex items-center justify-center bg-[#EFE9E0] sm:py-6">
+        <div className="relative w-full sm:max-w-[440px] h-screen sm:h-[900px] sm:rounded-[2.2rem] sm:border sm:border-[#E4DCCF] overflow-hidden saathi-shell">
+          {profileStatus === "loading" && (
+            <div className="h-full flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full border-4 border-[#2F6B4A]/25 border-t-[#2F6B4A] animate-spin" />
+            </div>
+          )}
+          {profileStatus === "missing" && <OnboardingScreen />}
+          {profileStatus === "error" && (
+            <div className="h-full flex flex-col items-center justify-center px-8 text-center">
+              <p className="text-[17px] font-bold text-[#1B2A28]">Can&apos;t reach Jagdamba servers</p>
+              <p className="text-[13px] text-[#6B7A77] mt-2">In an emergency, call 112 directly.</p>
+              <a href="tel:112" className="mt-5 rounded-2xl bg-[#E5603C] text-white py-3 px-8 text-[15px] font-bold">Call 112</a>
+              <button onClick={reloadProfile} className="mt-3 text-[14px] font-semibold text-[#2F6B4A]">Try again</button>
+            </div>
+          )}
+          <Toaster position="top-center" richColors toastOptions={{ style: { borderRadius: "16px" } }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <EmergencyProvider>
       <div className="App min-h-screen w-full flex items-center justify-center bg-[#EFE9E0] sm:py-6">
         {/* Mobile frame */}
         <div className="relative w-full sm:max-w-[440px] h-screen sm:h-[900px] sm:rounded-[2.2rem] sm:border sm:border-[#E4DCCF] overflow-hidden saathi-shell sm:shadow-[0_30px_80px_-30px_rgba(27,42,40,0.4)]">
           <div className="flex flex-col h-full">
-            {showChrome && <Header />}
+            {showChrome && <Header onProfile={() => navigate("profile")} />}
             <main className={`flex-1 overflow-y-auto no-scrollbar ${showChrome ? "pb-24" : ""}`}>
               {renderScreen()}
             </main>
@@ -106,6 +135,14 @@ function App() {
         </div>
       </div>
     </EmergencyProvider>
+  );
+}
+
+function App() {
+  return (
+    <UserProvider>
+      <AppShell />
+    </UserProvider>
   );
 }
 
