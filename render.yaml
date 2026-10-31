@@ -15,3 +15,15 @@ services:
         value: jagdamba
       - key: GEMINI_API_KEY
         sync: false
+      # Real SOS text messages (leave blank to disable)
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: DEFAULT_COUNTRY_CODE
+        value: "+91"
+      # Identify the app to OpenStreetMap services (put your email in it)
+      - key: OSM_USER_AGENT
+        sync: false
