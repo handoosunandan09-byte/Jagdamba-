@@ -21,6 +21,8 @@ React frontend (Netlify) + FastAPI backend (Render) + MongoDB.
 | `MONGO_URL`, `DB_NAME` | yes | MongoDB Atlas connection |
 | `GEMINI_API_KEY` | yes | Google AI Studio key |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` | for real SMS | On a Twilio trial you can only text verified numbers |
+| `TWILIO_WHATSAPP_FROM` | for auto WhatsApp | Twilio WhatsApp sender, e.g. `+14155238886` for the sandbox. Uses the same SID/token as above |
+| `TWILIO_WHATSAPP_CONTENT_SID` | optional | Approved WhatsApp template (`HX…`) with variables 1=name, 2=reason, 3=location link. Lets alerts reach contacts who haven't messaged you in 24 h |
 | `DEFAULT_COUNTRY_CODE` | no | Added to contact numbers saved without a country code (default `+91`) |
 | `OSM_USER_AGENT` | recommended | e.g. `Jagdamba/1.0 (you@example.com)` — required by OpenStreetMap usage policy |
 | `CORS_ORIGINS` | no | Comma-separated allowed origins (default `*`) |

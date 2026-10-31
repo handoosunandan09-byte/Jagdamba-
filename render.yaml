@@ -22,6 +22,11 @@ services:
         sync: false
       - key: TWILIO_FROM_NUMBER
         sync: false
+      # Automatic WhatsApp alerts (sandbox: +14155238886)
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false
+      - key: TWILIO_WHATSAPP_CONTENT_SID
+        sync: false
       - key: DEFAULT_COUNTRY_CODE
         value: "+91"
       # Identify the app to OpenStreetMap services (put your email in it)
