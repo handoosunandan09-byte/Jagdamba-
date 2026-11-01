@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from "react";
 import { useEmergencyMediaRecorder } from "../hooks/useEmergencyMediaRecorder";
 import { useSOSDispatch } from "../hooks/useSOSDispatch";
+import { downloadBlob, evidenceFileName } from "../lib/emergencyDB";
+import { toast } from "sonner";
 
 const EmergencyContext = createContext(null);
 export const useEmergency = () => useContext(EmergencyContext);
@@ -33,7 +35,7 @@ export const EmergencyProvider = ({ children }) => {
     const evidenceId = `ev-${Date.now()}`;
     evidenceIdRef.current = evidenceId;
     // Start evidence capture (best-effort, non-blocking)
-    recorder.start(evidenceId);
+    recorder.start(evidenceId, { label: "SOS" });
     // Dispatch alerts (fires even if media failed)
     setDispatching(true);
     try {
@@ -72,7 +74,12 @@ export const EmergencyProvider = ({ children }) => {
   const cancelWithPin = useCallback(async (entered) => {
     if (pin && entered !== pin) return false;
     clearInterval(countdownTimer.current);
-    await recorder.stop();
+    const saved = await recorder.stop();
+    if (saved?.blob) {
+      // Keep a copy in the phone's Downloads as well as in the app's Recordings
+      try { downloadBlob(saved.blob, evidenceFileName({ ...saved.meta, startedAt: Number(String(evidenceIdRef.current).replace("ev-", "")) })); } catch (e) { /* noop */ }
+      toast.success("Recording saved", { description: "In Profile → SOS recordings, and a copy in your phone's Downloads." });
+    }
     setPhase("idle");
     setDiscreet(false);
     setDispatchResult(null);
@@ -91,6 +98,7 @@ export const EmergencyProvider = ({ children }) => {
     dispatchResult,
     dispatching,
     recording: recorder.recording,
+    recordingKind: recorder.kind,
     mediaError: recorder.mediaError,
     stream: recorder.stream,
     pin,

@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useEmergency } from "./EmergencyContext";
-import { isWakePhrase, hasName, hasHelp, isDismiss } from "../lib/wakePhrase";
+import { isWakePhrase, hasName, hasHelp, isDismiss, normalise } from "../lib/wakePhrase";
+import { useUser } from "./UserContext";
+import { sendChat, getSessionId } from "../lib/api";
 
 // Hands-free SOS: while enabled, keeps the browser's speech recogniser running and
 // starts the SOS countdown when it hears "Jagdamba, I need help".
@@ -8,23 +10,33 @@ import { isWakePhrase, hasName, hasHelp, isDismiss } from "../lib/wakePhrase";
 // listening), so we also hold a screen wake lock while it's on.
 
 const STORAGE_KEY = "jagdamba_voice_sos";
-const AWAKE_MS = 8000; // how long the orb listens for "help" after hearing "Jagdamba"
+const AWAKE_MS = 10000; // how long the orb keeps listening after hearing "Jagdamba" or answering
 
-// Spoken replies (Siri-style). Kept free of the name and help words so the
-// recogniser can't trigger itself by hearing the phone speak.
-const say = (text) => {
+// Speaks out loud (Siri-style). While the phone is talking we ignore what the
+// microphone hears, so Jagdamba can't trigger SOS by hearing her own voice.
+const speakingUntil = { t: 0 };
+const isSpeaking = () => Date.now() < speakingUntil.t || !!window.speechSynthesis?.speaking;
+const say = (text) => new Promise((resolve) => {
   try {
     const synth = window.speechSynthesis;
-    if (!synth) return;
+    if (!synth || !text) { resolve(); return; }
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "en-IN";
     u.rate = 1.02;
     const voice = synth.getVoices().find((v) => v.lang === "en-IN") || synth.getVoices().find((v) => v.lang?.startsWith("en"));
     if (voice) u.voice = voice;
+    // Rough upper bound in case "end" never fires
+    speakingUntil.t = Date.now() + 1500 + text.length * 90;
+    const done = () => { speakingUntil.t = Date.now() + 700; resolve(); };
+    u.onend = done;
+    u.onerror = done;
     synth.speak(u);
-  } catch (e) { /* speech output unavailable */ }
-};
+  } catch (e) { resolve(); }
+});
+
+// Text spoken after the name, e.g. "Jagdamba where is the nearest hospital"
+const afterName = (text) => normalise(text).replace(/^.*?jag\s*a?\s*d?\s*h?\s*amb\S*\s*/, "").trim();
 const VoiceGuardContext = createContext(null);
 
 const readEnabled = () => { try { return localStorage.getItem(STORAGE_KEY) === "on"; } catch (e) { return false; } };
@@ -32,6 +44,12 @@ const writeEnabled = (on) => { try { localStorage.setItem(STORAGE_KEY, on ? "on"
 
 export const VoiceGuardProvider = ({ paused = false, children }) => {
   const { phase, trigger } = useEmergency();
+  const { coords } = useUser();
+  const coordsRef = useRef(coords);
+  coordsRef.current = coords;
+  const sessionId = useRef(getSessionId()).current;
+  // Conversation with the assistant: idle | thinking | speaking
+  const [chat, setChat] = useState({ status: "idle", you: "", reply: "" });
   const SR = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
   const supported = !!SR;
 
@@ -58,7 +76,37 @@ export const VoiceGuardProvider = ({ paused = false, children }) => {
     clearTimeout(awakeTimer.current);
     awakeRef.current = false;
     setAwake(false);
+    setChat({ status: "idle", you: "", reply: "" });
+    try { window.speechSynthesis?.cancel(); } catch (e) { /* noop */ }
   }, []);
+
+  const keepAwake = useCallback(() => {
+    clearTimeout(awakeTimer.current);
+    awakeTimer.current = setTimeout(() => sleepRef.current(), AWAKE_MS);
+  }, []);
+
+  // Ask Jagdamba (Gemini) and speak the answer, then keep listening for a follow-up
+  const ask = useCallback(async (question) => {
+    if (!question) return;
+    clearTimeout(awakeTimer.current);
+    setChat({ status: "thinking", you: question, reply: "" });
+    let reply;
+    try {
+      reply = await sendChat(sessionId, question, coordsRef.current);
+    } catch (e) {
+      reply = "I couldn't reach the internet just now. If you're in danger, say bachao and I'll alert your contacts.";
+    }
+    if (!awakeRef.current) return; // closed while thinking
+    setChat({ status: "speaking", you: question, reply });
+    await say(reply);
+    if (!awakeRef.current) return;
+    setChat((c) => ({ ...c, status: "idle" }));
+    keepAwake();
+  }, [sessionId, keepAwake]);
+  const askRef = useRef(ask);
+  askRef.current = ask;
+  const keepAwakeRef = useRef(keepAwake);
+  keepAwakeRef.current = keepAwake;
 
   // "Jagdamba" heard (or orb tapped): open a short listening window
   const wake = useCallback((speak = true) => {
@@ -66,6 +114,7 @@ export const VoiceGuardProvider = ({ paused = false, children }) => {
     awakeRef.current = true;
     setAwake(true);
     try { navigator.vibrate && navigator.vibrate(60); } catch (e) { /* noop */ }
+    setChat({ status: "idle", you: "", reply: "" });
     if (speak) say("I'm here. Tell me what happened.");
     awakeTimer.current = setTimeout(sleep, AWAKE_MS);
   }, [sleep]);
@@ -125,6 +174,8 @@ export const VoiceGuardProvider = ({ paused = false, children }) => {
       rec.onstart = () => { setListening(true); };
       rec.onresult = (e) => {
         failures.current = 0;
+        // Ignore the phone's own voice
+        if (isSpeaking()) return;
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const res = e.results[i];
           for (let a = 0; a < res.length; a++) {
@@ -143,11 +194,18 @@ export const VoiceGuardProvider = ({ paused = false, children }) => {
             say("Okay. I'm still here if you need me.");
             sleepRef.current();
           } else if (!awakeRef.current && hasName(best)) {
-            wakeRef.current(true);
-          } else if (awakeRef.current && res.isFinal) {
-            // Keep listening a little longer while they're still talking
-            clearTimeout(awakeTimer.current);
-            awakeTimer.current = setTimeout(() => sleepRef.current(), AWAKE_MS);
+            // Show the orb as soon as the name is heard; reply once they finish speaking
+            wakeRef.current(false);
+            if (res.isFinal) {
+              const rest = afterName(best);
+              if (rest) askRef.current(rest);
+              else { say("I'm here. Tell me what happened."); keepAwakeRef.current(); }
+            }
+          } else if (awakeRef.current && res.isFinal && best.trim()) {
+            // Anything said while the orb is open is a question for Jagdamba
+            const rest = hasName(best) ? afterName(best) : best.trim();
+            if (rest) askRef.current(rest);
+            else { say("I'm here. Tell me what happened."); keepAwakeRef.current(); }
           }
         }
         setHeard(e.results[e.results.length - 1][0].transcript);
@@ -190,7 +248,7 @@ export const VoiceGuardProvider = ({ paused = false, children }) => {
   }, [active, SR]);
 
   return (
-    <VoiceGuardContext.Provider value={{ supported, enabled, setEnabled, listening, active, error, heard, awake, wake, sleep, fireSos }}>
+    <VoiceGuardContext.Provider value={{ supported, enabled, setEnabled, listening, active, error, heard, awake, wake, sleep, fireSos, chat, ask }}>
       {children}
     </VoiceGuardContext.Provider>
   );

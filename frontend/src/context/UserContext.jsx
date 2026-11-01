@@ -12,22 +12,32 @@ const movedEnough = (a, b) => {
   return Math.sqrt(dLat * dLat + dLng * dLng) > 150; // re-geocode after ~150 m
 };
 
+// The profile is cached on the phone so the app opens instantly, even while the
+// free-tier server is still waking up; it's refreshed in the background.
+const PROFILE_CACHE = "jagdamba_profile";
+const readCachedProfile = () => { try { return JSON.parse(localStorage.getItem(PROFILE_CACHE) || "null"); } catch (e) { return null; } };
+const cacheProfile = (p) => { try { p ? localStorage.setItem(PROFILE_CACHE, JSON.stringify(p)) : localStorage.removeItem(PROFILE_CACHE); } catch (e) { /* noop */ } };
+
 export const UserProvider = ({ children }) => {
-  const [profile, setProfile] = useState(null);
-  const [profileStatus, setProfileStatus] = useState("loading"); // loading | ready | missing | error
+  const cached = readCachedProfile();
+  const [profile, setProfile] = useState(cached);
+  const [profileStatus, setProfileStatus] = useState(cached ? "ready" : "loading"); // loading | ready | missing | error
   const [coords, setCoords] = useState(null); // { lat, lng, accuracy }
   const [locStatus, setLocStatus] = useState("locating"); // locating | ok | denied | unsupported | error
   const [place, setPlace] = useState(null);
   const lastGeocoded = useRef(null);
 
   const loadProfile = useCallback(async () => {
-    setProfileStatus("loading");
+    const hadCache = !!readCachedProfile();
+    if (!hadCache) setProfileStatus("loading");
     try {
       const p = await getProfile();
       setProfile(p);
+      cacheProfile(p);
       setProfileStatus(p ? "ready" : "missing");
     } catch (e) {
-      setProfileStatus("error");
+      // Offline or server asleep: keep using the cached profile if we have one
+      if (!hadCache) setProfileStatus("error");
     }
   }, []);
 
@@ -36,6 +46,7 @@ export const UserProvider = ({ children }) => {
   const updateProfile = useCallback(async (payload) => {
     const p = await saveProfile(payload);
     setProfile(p);
+    cacheProfile(p);
     setProfileStatus("ready");
     return p;
   }, []);
