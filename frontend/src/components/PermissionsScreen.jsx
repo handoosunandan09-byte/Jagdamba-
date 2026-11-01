@@ -1,13 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { MapPin, Mic, Camera, Bell, Activity, Check, X, Loader2, ShieldCheck, ChevronLeft } from "lucide-react";
 import { useUser } from "../context/UserContext";
+import { markPermsDone as markDone } from "../lib/perms";
 
 // One place to grant everything Jagdamba needs, asked once at first run
 // (and reachable later from Profile → App permissions).
 
-export const PERMS_DONE_KEY = "jagdamba_perms_done";
-export const permsDone = () => { try { return localStorage.getItem(PERMS_DONE_KEY) === "1"; } catch (e) { return true; } };
-const markDone = () => { try { localStorage.setItem(PERMS_DONE_KEY, "1"); } catch (e) { /* noop */ } };
 
 const ITEMS = [
   { id: "location", icon: MapPin, title: "Location", why: "Share where you are in an SOS and find help nearby" },

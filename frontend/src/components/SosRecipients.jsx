@@ -23,6 +23,11 @@ const SosRecipients = ({ result }) => {
   const message = result?.message || "";
   return (
     <div className="w-full">
+      {result?.delivery === "not_configured" && recipients.length > 0 && (
+        <p className="mt-4 text-left text-[12px] leading-snug text-[#8A5A12] bg-[#FBF1DE] border border-[#E9D3A8] rounded-xl px-3 py-2.5">
+          Automatic sending isn&apos;t switched on yet, so alerts can&apos;t go out by themselves. Tap WhatsApp below to send now.
+        </p>
+      )}
       <div className="mt-4 w-full bg-white rounded-2xl border border-[#E7E0D1] divide-y divide-[#F1EADF] text-left">
         {recipients.map((r, i) => {
           const c = chip[r.status] || chip.not_sent;

@@ -26,7 +26,8 @@ const ORB_CSS = `
 const VoiceOrb = () => {
   const vg = useVoiceGuard();
   if (!vg || !vg.enabled || !vg.active) return null;
-  const { listening, awake, wake, sleep, fireSos, heard } = vg;
+  const { listening, awake, wake, sleep, fireSos, heard, chat } = vg;
+  const status = chat?.status || "idle";
 
   return (
     <>
@@ -56,9 +57,26 @@ const VoiceOrb = () => {
               <span className="jg-wave" style={{ animationDelay: ".55s" }} />
               <span className="jg-orb jg-orb-awake block h-28 w-28" />
             </div>
-            <p className="text-[19px] font-extrabold">I&apos;m here. What happened?</p>
-            <p className="text-[13px] text-white/70 mt-1.5">Say &ldquo;help&rdquo; or &ldquo;bachao&rdquo; to send SOS, or &ldquo;I&apos;m fine&rdquo; to close.</p>
-            {heard && <p className="text-[13px] italic text-white/85 mt-3 max-w-[290px] truncate">&ldquo;{heard}&rdquo;</p>}
+            {chat?.you ? (
+              <div className="w-full max-w-[320px] space-y-2.5 text-left">
+                <p className="text-[13px] text-white/70"><span className="font-semibold text-white/50">You: </span>{chat.you}</p>
+                {status === "thinking" ? (
+                  <p className="text-[15px] font-semibold text-white/90 flex items-center gap-2">
+                    <span className="flex gap-1">{[0, 150, 300].map((d) => <span key={d} className="h-1.5 w-1.5 rounded-full bg-white/80 animate-bounce" style={{ animationDelay: `${d}ms` }} />)}</span>
+                    Thinking…
+                  </p>
+                ) : (
+                  <p className="text-[15.5px] font-semibold leading-snug max-h-[150px] overflow-y-auto no-scrollbar">{chat.reply}</p>
+                )}
+                {status === "idle" && <p className="text-[12px] text-white/55">Listening… ask anything else, or say &ldquo;bachao&rdquo; for SOS.</p>}
+              </div>
+            ) : (
+              <>
+                <p className="text-[19px] font-extrabold">I&apos;m here. What happened?</p>
+                <p className="text-[13px] text-white/70 mt-1.5">Talk to me, ask for help nearby, or say &ldquo;bachao&rdquo; to send SOS. Say &ldquo;I&apos;m fine&rdquo; to close.</p>
+                {heard && <p className="text-[13px] italic text-white/85 mt-3 max-w-[290px] truncate">&ldquo;{heard}&rdquo;</p>}
+              </>
+            )}
             <div className="grid grid-cols-2 gap-3 w-full mt-6">
               <button onClick={fireSos} className="rounded-2xl bg-[#DC2626] py-3.5 text-[15px] font-bold hover:bg-[#B91C1C] transition-colors">Send SOS</button>
               <button onClick={sleep} className="rounded-2xl bg-white/10 py-3.5 text-[15px] font-semibold hover:bg-white/20 transition-colors">I&apos;m fine</button>

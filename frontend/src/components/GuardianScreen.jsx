@@ -46,7 +46,7 @@ const useAlarm = () => {
   return { start, stop };
 };
 
-const GuardianScreen = ({ onBack }) => {
+const GuardianScreen = ({ onBack, onAlert }) => {
   const { firstName } = useUser();
   const [phase, setPhase] = useState("idle"); // idle | armed | alert | sending | sent | error
   const [count, setCount] = useState(COUNTDOWN);
@@ -55,9 +55,12 @@ const GuardianScreen = ({ onBack }) => {
   const countdownRef = useRef(null);
   const alarm = useAlarm();
 
+  const onAlertRef = useRef(onAlert);
+  onAlertRef.current = onAlert;
   const onImpact = useCallback((g) => {
     setImpactG(g);
     setPhase("alert");
+    onAlertRef.current?.(); // bring this screen to the front from anywhere in the app
   }, []);
 
   const { armed, supported, peakG, arm, disarm, simulate } = useCrashDetection({ threshold: 30, onImpact });
