@@ -81,12 +81,20 @@ const DiscreetScreen = ({ onExit }) => (
 
 // ---- Live recording PiP ----
 const RecordingPiP = () => {
-  const { stream, recording, mediaError } = useEmergency();
+  const { stream, recording, mediaError, recordingKind } = useEmergency();
   const videoRef = useRef(null);
   useEffect(() => {
     if (videoRef.current && stream) videoRef.current.srcObject = stream;
   }, [stream]);
 
+  if (recording && recordingKind === "audio") {
+    return (
+      <div className="rounded-xl bg-[#1A1A1A] border border-white/10 p-3 flex items-center gap-2 w-[150px]">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#DC2626] animate-pulse shrink-0" />
+        <span className="text-[10px] text-white/85 leading-tight">Recording voice{mediaError ? " (camera blocked)" : ""}</span>
+      </div>
+    );
+  }
   if (mediaError) {
     return (
       <div className="rounded-xl bg-[#1A1A1A] border border-white/10 p-3 flex items-center gap-2 w-[150px]">
