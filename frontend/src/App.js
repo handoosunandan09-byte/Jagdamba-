@@ -1,22 +1,24 @@
-import React, { useState, Suspense, lazy } from "react";
+import React, { useState, useEffect, Suspense, lazy } from "react";
 import "./App.css";
 import { Toaster } from "sonner";
 import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
 import HomeScreen from "./components/HomeScreen";
-import TalkScreen from "./components/TalkScreen";
-import SafetyModeScreen from "./components/SafetyModeScreen";
-import NearbyScreen from "./components/NearbyScreen";
-import ReportScreen from "./components/ReportScreen";
-import AlertsScreen from "./components/AlertsScreen";
-import ProfileScreen from "./components/ProfileScreen";
-import SosScreen from "./components/SosScreen";
-import ContactsScreen from "./components/ContactsScreen";
-import GuardianScreen from "./components/GuardianScreen";
+const TalkScreen = lazy(() => import("./components/TalkScreen"));
+const SafetyModeScreen = lazy(() => import("./components/SafetyModeScreen"));
+const NearbyScreen = lazy(() => import("./components/NearbyScreen"));
+const ReportScreen = lazy(() => import("./components/ReportScreen"));
+const AlertsScreen = lazy(() => import("./components/AlertsScreen"));
+const ProfileScreen = lazy(() => import("./components/ProfileScreen"));
+const RecordingsScreen = lazy(() => import("./components/RecordingsScreen"));
+const SosScreen = lazy(() => import("./components/SosScreen"));
+const ContactsScreen = lazy(() => import("./components/ContactsScreen"));
+const GuardianScreen = lazy(() => import("./components/GuardianScreen"));
 import { EmergencyProvider } from "./context/EmergencyContext";
 import { UserProvider, useUser } from "./context/UserContext";
 import OnboardingScreen from "./components/OnboardingScreen";
-import PermissionsScreen, { permsDone } from "./components/PermissionsScreen";
+import { permsDone } from "./lib/perms";
+const PermissionsScreen = lazy(() => import("./components/PermissionsScreen"));
 import { VoiceGuardProvider } from "./context/VoiceGuardContext";
 import VoiceOrb from "./components/VoiceOrb";
 import SOSDistressTrigger from "./components/emergency/SOSDistressTrigger";
@@ -39,6 +41,9 @@ function AppShell() {
   };
 
   const goHome = () => navigate("home");
+  // Once opened, Guardian Mode stays alive in the background of the app
+  const [guardianMounted, setGuardianMounted] = useState(false);
+  useEffect(() => { if (screen === "guardian") setGuardianMounted(true); }, [screen]);
 
   const activeTab = TABS.includes(screen) ? screen : "home";
   const showChrome = TABS.includes(screen); // show Header + BottomNav on tab screens
@@ -56,7 +61,9 @@ function AppShell() {
       case "contacts":
         return <ContactsScreen onBack={goHome} />;
       case "guardian":
-        return <GuardianScreen onBack={goHome} />;
+        return null; // kept mounted below so crash detection keeps running on other screens
+      case "recordings":
+        return <RecordingsScreen onBack={() => navigate("profile")} />;
       case "talk":
         return <TalkScreen onBack={goHome} emergency={screenProps.emergency} />;
       case "safety":
@@ -115,7 +122,14 @@ function AppShell() {
           <div className="flex flex-col h-full">
             {showChrome && <Header onProfile={() => navigate("profile")} />}
             <main className={`flex-1 overflow-y-auto no-scrollbar ${showChrome ? "pb-24" : ""}`}>
+              <Suspense fallback={<div className="h-full flex items-center justify-center py-20"><div className="h-9 w-9 rounded-full border-4 border-[#2F6B4A]/25 border-t-[#2F6B4A] animate-spin" /></div>}>
               {renderScreen()}
+              {guardianMounted && (
+                <div className={screen === "guardian" ? "h-full" : "hidden"}>
+                  <GuardianScreen onBack={goHome} onAlert={() => navigate("guardian")} />
+                </div>
+              )}
+              </Suspense>
             </main>
           </div>
           {showChrome && <BottomNav active={activeTab} onNavigate={(id) => navigate(id)} />}
