@@ -18,6 +18,9 @@ import { EmergencyProvider } from "./context/EmergencyContext";
 import { UserProvider, useUser } from "./context/UserContext";
 import OnboardingScreen from "./components/OnboardingScreen";
 import { permsDone } from "./lib/perms";
+import { sessionUnlocked } from "./lib/biometric";
+import BiometricGate from "./components/BiometricGate";
+const FingerprintSetup = lazy(() => import("./components/FingerprintSetup"));
 const PermissionsScreen = lazy(() => import("./components/PermissionsScreen"));
 import { VoiceGuardProvider } from "./context/VoiceGuardContext";
 import VoiceOrb from "./components/VoiceOrb";
@@ -34,6 +37,8 @@ function AppShell() {
   const { profileStatus, reloadProfile } = useUser();
   const [screen, setScreen] = useState(() => (permsDone() ? "home" : "permissions"));
   const [screenProps, setScreenProps] = useState({});
+  // Holo Shield entry screen: shown once per app session (fingerprint unlock when enrolled)
+  const [locked, setLocked] = useState(() => permsDone() && !sessionUnlocked());
 
   const navigate = (next, props = {}) => {
     setScreenProps(props);
@@ -62,6 +67,8 @@ function AppShell() {
         return <ContactsScreen onBack={goHome} />;
       case "guardian":
         return null; // kept mounted below so crash detection keeps running on other screens
+      case "fingerprint":
+        return <FingerprintSetup onBack={() => navigate("profile")} />;
       case "recordings":
         return <RecordingsScreen onBack={() => navigate("profile")} />;
       case "talk":
@@ -90,23 +97,23 @@ function AppShell() {
 
   if (profileStatus !== "ready") {
     return (
-      <div className="App min-h-screen w-full flex items-center justify-center bg-[#EFE9E0] sm:py-6">
-        <div className="relative w-full sm:max-w-[440px] h-screen sm:h-[900px] sm:rounded-[2.2rem] sm:border sm:border-[#E4DCCF] overflow-hidden saathi-shell">
+      <div className="App min-h-screen w-full flex items-center justify-center bg-[#010309] sm:py-6">
+        <div className="relative w-full sm:max-w-[440px] h-screen sm:h-[900px] sm:rounded-[2.2rem] sm:border sm:border-[#78BEFF]/20 overflow-hidden saathi-shell">
           {profileStatus === "loading" && (
             <div className="h-full flex items-center justify-center">
-              <div className="h-10 w-10 rounded-full border-4 border-[#2F6B4A]/25 border-t-[#2F6B4A] animate-spin" />
+              <div className="h-10 w-10 rounded-full border-4 border-[#56E6FF]/25 border-t-[#56E6FF] animate-spin" />
             </div>
           )}
           {profileStatus === "missing" && <OnboardingScreen />}
           {profileStatus === "error" && (
             <div className="h-full flex flex-col items-center justify-center px-8 text-center">
-              <p className="text-[17px] font-bold text-[#1B2A28]">Can&apos;t reach Jagdamba servers</p>
-              <p className="text-[13px] text-[#6B7A77] mt-2">In an emergency, call 112 directly.</p>
+              <p className="text-[17px] font-bold text-[#EEF4FF]">Can&apos;t reach Jagdamba servers</p>
+              <p className="text-[13px] text-[#93A3CC] mt-2">In an emergency, call 112 directly.</p>
               <a href="tel:112" className="mt-5 rounded-2xl bg-[#E5603C] text-white py-3 px-8 text-[15px] font-bold">Call 112</a>
-              <button onClick={reloadProfile} className="mt-3 text-[14px] font-semibold text-[#2F6B4A]">Try again</button>
+              <button onClick={reloadProfile} className="mt-3 text-[14px] font-semibold text-[#56E6FF]">Try again</button>
             </div>
           )}
-          <Toaster position="top-center" richColors toastOptions={{ style: { borderRadius: "16px" } }} />
+          <Toaster position="top-center" richColors theme="dark" theme="dark" toastOptions={{ style: { borderRadius: "16px" } }} />
         </div>
       </div>
     );
@@ -116,13 +123,13 @@ function AppShell() {
     <EmergencyProvider>
       {/* Talk screen uses the microphone for dictation, so pause hands-free SOS there */}
       <VoiceGuardProvider paused={screen === "talk"}>
-      <div className="App min-h-screen w-full flex items-center justify-center bg-[#EFE9E0] sm:py-6">
+      <div className="App min-h-screen w-full flex items-center justify-center bg-[#010309] sm:py-6">
         {/* Mobile frame */}
-        <div className="relative w-full sm:max-w-[440px] h-screen sm:h-[900px] sm:rounded-[2.2rem] sm:border sm:border-[#E4DCCF] overflow-hidden saathi-shell sm:shadow-[0_30px_80px_-30px_rgba(27,42,40,0.4)]">
+        <div className="relative w-full sm:max-w-[440px] h-screen sm:h-[900px] sm:rounded-[2.2rem] sm:border sm:border-[#78BEFF]/20 overflow-hidden saathi-shell sm:shadow-[0_30px_80px_-30px_rgba(61,123,255,0.45)]">
           <div className="flex flex-col h-full">
             {showChrome && <Header onProfile={() => navigate("profile")} />}
-            <main className={`flex-1 overflow-y-auto no-scrollbar ${showChrome ? "pb-24" : ""}`}>
-              <Suspense fallback={<div className="h-full flex items-center justify-center py-20"><div className="h-9 w-9 rounded-full border-4 border-[#2F6B4A]/25 border-t-[#2F6B4A] animate-spin" /></div>}>
+            <main className={`flex-1 overflow-y-auto no-scrollbar ${showChrome ? "pb-28" : ""}`}>
+              <Suspense fallback={<div className="h-full flex items-center justify-center py-20"><div className="h-9 w-9 rounded-full border-4 border-[#56E6FF]/25 border-t-[#56E6FF] animate-spin" /></div>}>
               {renderScreen()}
               {guardianMounted && (
                 <div className={screen === "guardian" ? "h-full" : "hidden"}>
@@ -144,15 +151,18 @@ function AppShell() {
           {screen === "guardianmap" && (
             <div className="absolute inset-0 z-40">
               <Suspense fallback={
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#EDEDE7]">
-                  <div className="h-12 w-12 rounded-full border-4 border-[#0D9488]/30 border-t-[#0D9488] animate-spin mb-4" />
-                  <p className="text-[14px] font-semibold text-[#334155]">Loading Guardian City engine…</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#02050F]">
+                  <div className="h-12 w-12 rounded-full border-4 border-[#56E6FF]/30 border-t-[#56E6FF] animate-spin mb-4" />
+                  <p className="text-[14px] font-semibold text-[#93A3CC]">Loading Guardian City engine…</p>
                 </div>
               }>
                 <GuardianCityMap onBack={goHome} />
               </Suspense>
             </div>
           )}
+
+          {/* Fingerprint / welcome entry (Voice SOS keeps listening underneath) */}
+          {locked && <BiometricGate onDone={() => setLocked(false)} />}
 
           {/* Emergency crisis-mode overlay (highest priority) */}
           <EmergencyOverlay />

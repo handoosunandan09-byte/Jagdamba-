@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Corinthia:wght@400;700&family=Michroma&family=Sora:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,7 +6,7 @@
 
 body {
     margin: 0;
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -17,26 +17,28 @@ code {
 
 @layer base {
   :root {
-        --background: 36 40% 97%;
-        --foreground: 170 22% 14%;
-        --card: 0 0% 100%;
-        --card-foreground: 170 22% 14%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 170 22% 14%;
-        --primary: 13 73% 57%;
+        /* Holo Shield: deep night blue, electric blue and cyan, with gold and saffron accents */
+        --background: 228 76% 4%;
+        --foreground: 220 100% 97%;
+        --card: 226 60% 12%;
+        --card-foreground: 220 100% 97%;
+        --popover: 226 60% 12%;
+        --popover-foreground: 220 100% 97%;
+        --primary: 220 100% 62%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 168 38% 90%;
-        --secondary-foreground: 170 50% 20%;
-        --muted: 36 20% 94%;
-        --muted-foreground: 170 8% 45%;
-        --accent: 168 38% 90%;
-        --accent-foreground: 170 50% 20%;
+        --secondary: 225 55% 17%;
+        --secondary-foreground: 190 100% 80%;
+        --muted: 225 50% 15%;
+        --muted-foreground: 224 33% 69%;
+        --accent: 225 55% 17%;
+        --accent-foreground: 190 100% 80%;
         --destructive: 0 72% 51%;
         --destructive-foreground: 0 0% 98%;
-        --border: 36 18% 90%;
-        --input: 36 18% 90%;
-        --ring: 13 73% 57%;
+        --border: 212 100% 74% / 0.2;
+        --input: 212 100% 74% / 0.25;
+        --ring: 189 100% 67%;
         --radius: 1rem;
+        color-scheme: dark;
     }
 }
 
@@ -50,31 +52,75 @@ code {
 }
 
 /* App specific helpers */
-.saathi-shell {
-  background-color: #EFE9DB;
+/* Main app ground: night sky, electric glow and a faint kolam dot grid */
+.saathi-shell, .holo-ground {
+  background-color: #02050F;
   background-image:
-    linear-gradient(0deg, rgba(255,255,255,0.55) 2px, transparent 2px),
-    linear-gradient(90deg, rgba(255,255,255,0.55) 2px, transparent 2px),
-    linear-gradient(0deg, rgba(120,140,110,0.10) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(120,140,110,0.10) 1px, transparent 1px);
-  background-size: 84px 84px, 84px 84px, 21px 21px, 21px 21px;
-  background-position: -2px -2px, -2px -2px, -1px -1px, -1px -1px;
+    radial-gradient(70% 32% at 50% 0%, rgba(61,123,255,0.28), transparent 70%),
+    radial-gradient(60% 30% at 100% 70%, rgba(86,230,255,0.08), transparent 70%),
+    radial-gradient(circle at 1px 1px, rgba(244,194,107,0.10) 1px, transparent 1.6px);
+  background-size: 100% 100%, 100% 100%, 22px 22px;
+  color: #EEF4FF;
 }
 
-/* Stronger map texture used inside the help card */
+/* Glass surface used for cards */
+.holo-glass {
+  background: linear-gradient(180deg, rgba(30,52,110,0.55), rgba(10,18,44,0.75));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* Primary call to action */
+.holo-cta {
+  background: linear-gradient(90deg, #3D7BFF, #56E6FF);
+  color: #02050F;
+  box-shadow: 0 8px 26px rgba(61,123,255,0.45);
+}
+
+/* Calligraphic wordmark */
+.font-holo-script { font-family: 'Corinthia', 'Snell Roundhand', cursive; font-weight: 700; }
+.font-holo-label { font-family: 'Michroma', 'Sora', sans-serif; font-weight: 400; }
+.holo-wordmark {
+  background: linear-gradient(180deg, #FFFFFF 15%, #CDEFFF 55%, #F4C26B 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 16px rgba(61,123,255,0.5));
+}
+
+/* Map-textured help card, now a glowing grid */
 .map-card {
-  background-color: #E7E0CE;
+  background-color: #071331;
   background-image:
-    linear-gradient(115deg, rgba(255,255,255,0.75) 7px, transparent 7px),
-    linear-gradient(0deg, rgba(255,255,255,0.7) 4px, transparent 4px),
-    linear-gradient(90deg, rgba(255,255,255,0.7) 4px, transparent 4px),
-    linear-gradient(0deg, rgba(120,140,110,0.14) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(120,140,110,0.14) 1px, transparent 1px);
-  background-size: 180px 180px, 60px 60px, 60px 60px, 20px 20px, 20px 20px;
+    radial-gradient(60% 60% at 50% 45%, rgba(61,123,255,0.30), transparent 70%),
+    linear-gradient(0deg, rgba(86,230,255,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(86,230,255,0.07) 1px, transparent 1px);
+  background-size: 100% 100%, 20px 20px, 20px 20px;
 }
 
 .help-glow {
-  background: radial-gradient(circle at 50% 45%, rgba(233,110,80,0.22) 0%, rgba(233,110,80,0.10) 45%, rgba(233,110,80,0) 70%);
+  background: radial-gradient(circle at 50% 45%, rgba(86,230,255,0.22) 0%, rgba(61,123,255,0.10) 45%, rgba(61,123,255,0) 70%);
+}
+
+@keyframes holoSpin { to { transform: rotate(360deg); } }
+.holo-spin { transform-origin: 0 0; animation: holoSpin 40s linear infinite; }
+.holo-spin-rev { animation-duration: 70s; animation-direction: reverse; }
+
+@keyframes holoBreathe { 50% { transform: scale(1.12); opacity: 0.55; } }
+.holo-breathe { animation: holoBreathe 2.8s ease-in-out infinite; }
+
+@keyframes holoSweep { from { top: 0; } to { top: 100%; } }
+.holo-scanbar {
+  top: 0;
+  background: linear-gradient(90deg, transparent, #56E6FF, #fff, #56E6FF, transparent);
+  box-shadow: 0 0 14px #56E6FF, 0 0 30px #56E6FF;
+  animation: holoSweep 0.7s ease-in-out infinite alternate;
+}
+
+input::placeholder, textarea::placeholder { color: #6F7FA8; }
+
+@media (prefers-reduced-motion: reduce) {
+  .holo-spin, .holo-breathe, .pulse-ring { animation: none; }
+  .holo-scanbar { animation-duration: 2s; }
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
