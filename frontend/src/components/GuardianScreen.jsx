@@ -152,7 +152,7 @@ const GuardianScreen = ({ onBack, onAlert }) => {
         {(phase === "idle" || phase === "armed") && (
           <>
             <div className="relative flex items-center justify-center my-5" style={{ height: 220 }}>
-              {phase === "armed" && <span className="absolute h-[170px] w-[170px] rounded-full bg-[#2F6B4A]/20 pulse-ring" />}
+              {phase === "armed" && <span className="absolute h-[170px] w-[170px] rounded-full bg-[#3D7BFF]/20 pulse-ring" />}
               <div
                 className="h-[168px] w-[168px] rounded-full flex flex-col items-center justify-center text-white shadow-[0_18px_40px_-12px_rgba(47,107,74,0.5)]"
                 style={{ background: phase === "armed"
@@ -166,19 +166,19 @@ const GuardianScreen = ({ onBack, onAlert }) => {
             </div>
 
             {phase === "armed" && (
-              <div className="bg-white rounded-2xl border border-[#E7E0D1] p-4 mb-4">
+              <div className="bg-[#0E1A3A] rounded-2xl border border-[#78BEFF]/20 p-4 mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#6E6A5E]"><Activity className="h-3.5 w-3.5" /> Live motion</span>
-                  <span className="text-[12px] font-bold text-[#2F6B4A]">{peakG.toFixed(1)}g</span>
+                  <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#93A3CC]"><Activity className="h-3.5 w-3.5" /> Live motion</span>
+                  <span className="text-[12px] font-bold text-[#56E6FF]">{peakG.toFixed(1)}g</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-[#EDE7D9] overflow-hidden">
-                  <div className="h-full rounded-full bg-[#2F6B4A] transition-all duration-200" style={{ width: `${peakPct}%` }} />
+                  <div className="h-full rounded-full bg-[#3D7BFF] transition-all duration-200" style={{ width: `${peakPct}%` }} />
                 </div>
-                <p className="text-[11px] text-[#9A9684] mt-2">Auto-alert triggers above ~3g impact.</p>
+                <p className="text-[11px] text-[#93A3CC] mt-2">Auto-alert triggers above ~3g impact.</p>
               </div>
             )}
 
-            <div className="bg-[#E4EEE2] rounded-2xl p-4 mb-4 space-y-2.5">
+            <div className="bg-[#56E6FF]/10 rounded-2xl p-4 mb-4 space-y-2.5">
               {[
                 { icon: Car, t: "Detects a sudden crash or hard fall using your phone's motion sensors" },
                 { icon: TriangleAlert, t: "Pops a loud 15-second check: tap “I'm OK” to cancel a false alarm" },
@@ -187,27 +187,27 @@ const GuardianScreen = ({ onBack, onAlert }) => {
                 const I = r.icon;
                 return (
                   <div key={i} className="flex gap-2.5">
-                    <I className="h-4.5 w-4.5 text-[#2F6B4A] shrink-0 mt-0.5" />
-                    <p className="text-[12.5px] text-[#365043] leading-snug">{r.t}</p>
+                    <I className="h-4.5 w-4.5 text-[#56E6FF] shrink-0 mt-0.5" />
+                    <p className="text-[12.5px] text-[#BFE9FF] leading-snug">{r.t}</p>
                   </div>
                 );
               })}
             </div>
 
             {!supported && (
-              <p className="text-[12px] text-[#C15B3C] mb-3 text-center">Motion sensors aren&apos;t available on this device/browser. Use a phone, or try the demo below.</p>
+              <p className="text-[12px] text-[#FFB066] mb-3 text-center">Motion sensors aren&apos;t available on this device/browser. Use a phone, or try the demo below.</p>
             )}
 
             {phase === "idle" ? (
-              <button onClick={handleArm} className="w-full rounded-2xl bg-[#2F6B4A] text-white py-4 text-[15px] font-bold shadow-[0_12px_28px_-10px_rgba(47,107,74,0.55)] hover:bg-[#285C40] active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+              <button onClick={handleArm} className="w-full rounded-2xl bg-[#3D7BFF] text-white py-4 text-[15px] font-bold shadow-[0_12px_28px_-10px_rgba(47,107,74,0.55)] hover:bg-[#3D7BFF] active:scale-[0.99] transition-all flex items-center justify-center gap-2">
                 <Radar className="h-5 w-5" /> Arm Guardian Mode
               </button>
             ) : (
               <div className="space-y-3">
-                <button onClick={simulate} className="w-full rounded-2xl bg-white border-2 border-dashed border-[#E5603C]/50 text-[#E5603C] py-3.5 text-[14px] font-bold flex items-center justify-center gap-2 hover:bg-[#FBEAE3] transition-colors">
+                <button onClick={simulate} className="w-full rounded-2xl bg-[#0E1A3A] border-2 border-dashed border-[#E5603C]/50 text-[#FFB066] py-3.5 text-[14px] font-bold flex items-center justify-center gap-2 hover:bg-[#FF9933]/15 transition-colors">
                   <Zap className="h-4.5 w-4.5" /> Simulate impact (demo)
                 </button>
-                <button onClick={handleDisarm} className="w-full rounded-2xl bg-white border border-[#E7E0D1] text-[#2A2A22] py-3.5 text-[15px] font-semibold hover:bg-[#F3ECE1] transition-colors">
+                <button onClick={handleDisarm} className="w-full rounded-2xl bg-[#0E1A3A] border border-[#78BEFF]/20 text-[#EEF4FF] py-3.5 text-[15px] font-semibold hover:bg-[#13234D] transition-colors">
                   Disarm Guardian
                 </button>
               </div>
@@ -225,17 +225,17 @@ const GuardianScreen = ({ onBack, onAlert }) => {
                 <span className="text-[12px] text-white/85 mt-1">auto-alert in</span>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-[#E5603C] mb-1">
+            <div className="flex items-center gap-2 text-[#FFB066] mb-1">
               <TriangleAlert className="h-5 w-5" />
               <h2 className="text-[20px] font-extrabold">Possible accident detected</h2>
             </div>
-            <p className="text-[14px] text-[#6E6A5E] max-w-[280px]">Impact of ~{impactG.toFixed(1)}g detected. Are you okay{firstName ? `, ${firstName}` : ""}? We&apos;ll alert your contacts automatically if you don&apos;t respond.</p>
+            <p className="text-[14px] text-[#93A3CC] max-w-[280px]">Impact of ~{impactG.toFixed(1)}g detected. Are you okay{firstName ? `, ${firstName}` : ""}? We&apos;ll alert your contacts automatically if you don&apos;t respond.</p>
 
             <div className="w-full mt-7 space-y-3">
-              <button onClick={imOk} className="w-full rounded-2xl bg-[#2F6B4A] text-white py-4 text-[16px] font-bold hover:bg-[#285C40] transition-colors">
+              <button onClick={imOk} className="w-full rounded-2xl bg-[#3D7BFF] text-white py-4 text-[16px] font-bold hover:bg-[#3D7BFF] transition-colors">
                 I&apos;m OK — cancel
               </button>
-              <button onClick={sendEmergency} className="w-full rounded-2xl bg-white border-2 border-[#E5603C] text-[#E5603C] py-3.5 text-[15px] font-bold hover:bg-[#FBEAE3] transition-colors">
+              <button onClick={sendEmergency} className="w-full rounded-2xl bg-[#0E1A3A] border-2 border-[#E5603C] text-[#FFB066] py-3.5 text-[15px] font-bold hover:bg-[#FF9933]/15 transition-colors">
                 Send help now
               </button>
             </div>
@@ -244,32 +244,32 @@ const GuardianScreen = ({ onBack, onAlert }) => {
 
         {phase === "sending" && (
           <div className="flex flex-col items-center justify-center text-center pt-16">
-            <Loader2 className="h-10 w-10 animate-spin text-[#E5603C] mb-4" />
-            <h2 className="text-[20px] font-extrabold text-[#2A2A22]">Sending emergency alert…</h2>
-            <p className="text-[14px] text-[#6E6A5E] mt-2">Sharing your live location with your trusted circle.</p>
+            <Loader2 className="h-10 w-10 animate-spin text-[#FFB066] mb-4" />
+            <h2 className="text-[20px] font-extrabold text-[#EEF4FF]">Sending emergency alert…</h2>
+            <p className="text-[14px] text-[#93A3CC] mt-2">Sharing your live location with your trusted circle.</p>
           </div>
         )}
 
         {phase === "sent" && (
           <div className="flex flex-col items-center text-center pt-6 float-up">
-            <span className="h-20 w-20 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center mb-4 pop-in">
+            <span className="h-20 w-20 rounded-full bg-[#56E6FF]/10 text-[#56E6FF] flex items-center justify-center mb-4 pop-in">
               <Check className="h-10 w-10" strokeWidth={2.4} />
             </span>
-            <h2 className="text-[22px] font-extrabold text-[#2A2A22]">Emergency alert sent</h2>
-            <p className="text-[14px] text-[#6E6A5E] mt-2">We detected a possible accident. {recipients.filter((r) => r.status === "sent").length} of {recipients.length} contact{recipients.length !== 1 ? "s" : ""} were alerted automatically with your live location.</p>
+            <h2 className="text-[22px] font-extrabold text-[#EEF4FF]">Emergency alert sent</h2>
+            <p className="text-[14px] text-[#93A3CC] mt-2">We detected a possible accident. {recipients.filter((r) => r.status === "sent").length} of {recipients.length} contact{recipients.length !== 1 ? "s" : ""} were alerted automatically with your live location.</p>
 
             <SosRecipients result={result} />
-            <a href={result?.maps_link} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-[13px] font-semibold text-[#2F6B4A] bg-white border border-[#E7E0D1] rounded-full px-4 py-2 hover:bg-[#F3ECE1] transition-colors">
+            <a href={result?.maps_link} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-[13px] font-semibold text-[#56E6FF] bg-[#0E1A3A] border border-[#78BEFF]/20 rounded-full px-4 py-2 hover:bg-[#13234D] transition-colors">
               <MapPin className="h-4 w-4" /> Open shared location <ExternalLink className="h-3.5 w-3.5" />
             </a>
-                        <button onClick={onBack} className="w-full mt-6 rounded-2xl bg-[#2F6B4A] text-white py-4 text-[15px] font-bold hover:bg-[#285C40] transition-colors">Done</button>
+                        <button onClick={onBack} className="w-full mt-6 rounded-2xl bg-[#3D7BFF] text-white py-4 text-[15px] font-bold hover:bg-[#3D7BFF] transition-colors">Done</button>
           </div>
         )}
 
         {phase === "error" && (
           <div className="flex flex-col items-center text-center pt-16">
-            <h2 className="text-[20px] font-extrabold text-[#2A2A22]">Couldn&apos;t send alert</h2>
-            <p className="text-[14px] text-[#6E6A5E] mt-2">Please check your connection and try again.</p>
+            <h2 className="text-[20px] font-extrabold text-[#EEF4FF]">Couldn&apos;t send alert</h2>
+            <p className="text-[14px] text-[#93A3CC] mt-2">Please check your connection and try again.</p>
             <button onClick={sendEmergency} className="mt-6 rounded-2xl bg-[#E5603C] text-white py-3 px-8 text-[15px] font-bold hover:bg-[#d9542f] transition-colors">Retry</button>
           </div>
         )}

@@ -59,10 +59,10 @@ const RecordingsScreen = ({ onBack }) => {
       <ScreenHeader title="SOS recordings" subtitle="Front-camera video and voice from each SOS" onBack={onBack} />
       <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-3 float-up">
         {items === null && (
-          <div className="flex items-center justify-center gap-2 py-10 text-[#6B7A77] text-[13px]"><Loader2 className="h-5 w-5 animate-spin" /> Loading recordings…</div>
+          <div className="flex items-center justify-center gap-2 py-10 text-[#93A3CC] text-[13px]"><Loader2 className="h-5 w-5 animate-spin" /> Loading recordings…</div>
         )}
         {items && items.length === 0 && (
-          <p className="text-center text-[13px] text-[#6B7A77] py-8 px-6">No recordings yet. When an SOS starts, Jagdamba records video (or voice if the camera is blocked) and keeps it here.</p>
+          <p className="text-center text-[13px] text-[#93A3CC] py-8 px-6">No recordings yet. When an SOS starts, Jagdamba records video (or voice if the camera is blocked) and keeps it here.</p>
         )}
 
         <div className="space-y-3">
@@ -70,14 +70,14 @@ const RecordingsScreen = ({ onBack }) => {
             const Icon = it.kind === "audio" ? AudioLines : Video;
             const isPlaying = playing?.id === it.evidenceId;
             return (
-              <div key={it.evidenceId} className="bg-white rounded-2xl border border-[#EFE7DB] p-3.5">
+              <div key={it.evidenceId} className="bg-[#0E1A3A] rounded-2xl border border-[#78BEFF]/20 p-3.5">
                 <div className="flex items-center gap-3">
-                  <span className="h-10 w-10 shrink-0 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center"><Icon className="h-5 w-5" /></span>
+                  <span className="h-10 w-10 shrink-0 rounded-full bg-[#56E6FF]/10 text-[#56E6FF] flex items-center justify-center"><Icon className="h-5 w-5" /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-bold text-[#1B2A28] truncate">{it.label || (it.kind === "audio" ? "Voice recording" : "Video recording")}</p>
-                    <p className="text-[11.5px] text-[#6B7A77]">{fmtWhen(it.startedAt)} · {fmtDur(it.durationS)} · {fmtSize(it.size)}</p>
+                    <p className="text-[14px] font-bold text-[#EEF4FF] truncate">{it.label || (it.kind === "audio" ? "Voice recording" : "Video recording")}</p>
+                    <p className="text-[11.5px] text-[#93A3CC]">{fmtWhen(it.startedAt)} · {fmtDur(it.durationS)} · {fmtSize(it.size)}</p>
                   </div>
-                  {busy === it.evidenceId && <Loader2 className="h-4 w-4 animate-spin text-[#6B7A77]" />}
+                  {busy === it.evidenceId && <Loader2 className="h-4 w-4 animate-spin text-[#93A3CC]" />}
                 </div>
                 {isPlaying && (
                   it.kind === "audio"
@@ -85,16 +85,16 @@ const RecordingsScreen = ({ onBack }) => {
                     : <video src={playing.url} controls autoPlay playsInline className="w-full mt-3 rounded-xl bg-black max-h-[260px]" />
                 )}
                 <div className="grid grid-cols-4 gap-2 mt-3">
-                  <button onClick={() => play(it)} className="rounded-xl bg-[#F3F6F4] py-2 text-[11.5px] font-semibold text-[#2F6B4A] flex flex-col items-center gap-0.5"><Play className="h-4 w-4" /> Play</button>
-                  <button onClick={() => save(it)} className="rounded-xl bg-[#F3F6F4] py-2 text-[11.5px] font-semibold text-[#2F6B4A] flex flex-col items-center gap-0.5"><Download className="h-4 w-4" /> Save</button>
-                  <button onClick={() => share(it)} className="rounded-xl bg-[#F3F6F4] py-2 text-[11.5px] font-semibold text-[#2F6B4A] flex flex-col items-center gap-0.5"><Share2 className="h-4 w-4" /> Share</button>
-                  <button onClick={() => remove(it)} className="rounded-xl bg-[#FBEAE3] py-2 text-[11.5px] font-semibold text-[#C1452A] flex flex-col items-center gap-0.5"><Trash2 className="h-4 w-4" /> Delete</button>
+                  <button onClick={() => play(it)} className="rounded-xl bg-[#13234D] py-2 text-[11.5px] font-semibold text-[#56E6FF] flex flex-col items-center gap-0.5"><Play className="h-4 w-4" /> Play</button>
+                  <button onClick={() => save(it)} className="rounded-xl bg-[#13234D] py-2 text-[11.5px] font-semibold text-[#56E6FF] flex flex-col items-center gap-0.5"><Download className="h-4 w-4" /> Save</button>
+                  <button onClick={() => share(it)} className="rounded-xl bg-[#13234D] py-2 text-[11.5px] font-semibold text-[#56E6FF] flex flex-col items-center gap-0.5"><Share2 className="h-4 w-4" /> Share</button>
+                  <button onClick={() => remove(it)} className="rounded-xl bg-[#FF9933]/15 py-2 text-[11.5px] font-semibold text-[#FFB066] flex flex-col items-center gap-0.5"><Trash2 className="h-4 w-4" /> Delete</button>
                 </div>
               </div>
             );
           })}
         </div>
-        <p className="text-[11px] text-[#9AA7A3] text-center mt-5 pb-4">Recordings stay on this phone. Clearing your browser&apos;s site data removes them, so save important ones to Downloads.</p>
+        <p className="text-[11px] text-[#7484AE] text-center mt-5 pb-4">Recordings stay on this phone. Clearing your browser&apos;s site data removes them, so save important ones to Downloads.</p>
       </div>
     </div>
   );

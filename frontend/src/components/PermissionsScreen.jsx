@@ -107,44 +107,44 @@ const PermissionsScreen = ({ onDone, onBack }) => {
     <div className="flex flex-col h-full saathi-shell">
       {onBack && (
         <div className="p-4 pb-0">
-          <button onClick={onBack} className="h-9 w-9 rounded-full bg-white border border-[#EFE7DB] flex items-center justify-center text-[#1B2A28]" aria-label="Back">
+          <button onClick={onBack} className="h-9 w-9 rounded-full bg-[#0E1A3A] border border-[#78BEFF]/20 flex items-center justify-center text-[#EEF4FF]" aria-label="Back">
             <ChevronLeft className="h-5 w-5" />
           </button>
         </div>
       )}
       <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6 float-up">
-        <span className="h-14 w-14 rounded-2xl bg-[#E4EEE2] flex items-center justify-center mb-4">
-          <ShieldCheck className="h-7 w-7 text-[#2F6B4A]" strokeWidth={2.4} />
+        <span className="h-14 w-14 rounded-2xl bg-[#56E6FF]/10 flex items-center justify-center mb-4">
+          <ShieldCheck className="h-7 w-7 text-[#56E6FF]" strokeWidth={2.4} />
         </span>
-        <h2 className="text-[24px] font-extrabold tracking-tight text-[#1B2A28]">Give Jagdamba access</h2>
-        <p className="text-[13.5px] text-[#6B7A77] mt-1.5">
+        <h2 className="text-[24px] font-extrabold tracking-tight text-[#EEF4FF]">Give Jagdamba access</h2>
+        <p className="text-[13.5px] text-[#93A3CC] mt-1.5">
           Allow these now so nothing stops an alert in an emergency. Your browser will ask you to confirm each one.
         </p>
 
-        <div className="mt-5 bg-white rounded-2xl border border-[#EFE7DB] divide-y divide-[#F1EADF]">
+        <div className="mt-5 bg-[#0E1A3A] rounded-2xl border border-[#78BEFF]/20 divide-y divide-[#78BEFF]/15">
           {ITEMS.map((it) => {
             const I = it.icon;
             const st = states[it.id];
             return (
               <button key={it.id} onClick={() => ask(it.id)} disabled={busy !== null}
-                className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-[#FBF7F1] transition-colors disabled:cursor-wait">
-                <span className="h-9 w-9 shrink-0 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center"><I className="h-4.5 w-4.5" /></span>
+                className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-[#13234D] transition-colors disabled:cursor-wait">
+                <span className="h-9 w-9 shrink-0 rounded-full bg-[#56E6FF]/10 text-[#56E6FF] flex items-center justify-center"><I className="h-4.5 w-4.5" /></span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-[14px] font-bold text-[#1B2A28]">{it.title}</span>
-                  <span className="block text-[11.5px] text-[#6B7A77] leading-snug">{it.why}</span>
+                  <span className="block text-[14px] font-bold text-[#EEF4FF]">{it.title}</span>
+                  <span className="block text-[11.5px] text-[#93A3CC] leading-snug">{it.why}</span>
                 </span>
-                {busy === it.id ? <Loader2 className="h-4.5 w-4.5 animate-spin text-[#6B7A77]" />
-                  : st === "granted" ? <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#2F6B4A]"><Check className="h-4 w-4" /> Allowed</span>
-                  : st === "denied" ? <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#C1452A]"><X className="h-4 w-4" /> Blocked</span>
-                  : st === "unsupported" ? <span className="text-[11px] text-[#9AA7A3]">Not available</span>
-                  : <span className="text-[12px] font-bold text-[#E5603C]">Allow</span>}
+                {busy === it.id ? <Loader2 className="h-4.5 w-4.5 animate-spin text-[#93A3CC]" />
+                  : st === "granted" ? <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#56E6FF]"><Check className="h-4 w-4" /> Allowed</span>
+                  : st === "denied" ? <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#FFB066]"><X className="h-4 w-4" /> Blocked</span>
+                  : st === "unsupported" ? <span className="text-[11px] text-[#7484AE]">Not available</span>
+                  : <span className="text-[12px] font-bold text-[#FFB066]">Allow</span>}
               </button>
             );
           })}
         </div>
 
         {ITEMS.some((i) => states[i.id] === "denied") && (
-          <p className="text-[12px] text-[#C1452A] mt-3 leading-snug">
+          <p className="text-[12px] text-[#FFB066] mt-3 leading-snug">
             Blocked items can only be turned back on from your browser: tap the icon left of the address bar, then Permissions (or Site settings).
           </p>
         )}
@@ -155,7 +155,7 @@ const PermissionsScreen = ({ onDone, onBack }) => {
           {pending ? "Allow all" : "Continue"}
         </button>
         {pending > 0 && (
-          <button onClick={finish} className="w-full mt-3 text-[13px] font-semibold text-[#6B7A77] py-2">Skip for now</button>
+          <button onClick={finish} className="w-full mt-3 text-[13px] font-semibold text-[#93A3CC] py-2">Skip for now</button>
         )}
       </div>
     </div>

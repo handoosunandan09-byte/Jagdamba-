@@ -9,7 +9,7 @@ const LocationGate = ({ children }) => {
 
   if (locStatus === "locating") {
     return (
-      <div className="flex items-center justify-center gap-2 py-10 text-[#6B7A77] text-[13px]">
+      <div className="flex items-center justify-center gap-2 py-10 text-[#93A3CC] text-[13px]">
         <Loader2 className="h-5 w-5 animate-spin" /> Getting your location…
       </div>
     );
@@ -21,10 +21,10 @@ const LocationGate = ({ children }) => {
   }[locStatus];
   return (
     <div className="text-center py-8 px-4">
-      <span className="mx-auto h-12 w-12 rounded-full bg-[#FBEAE3] text-[#E5603C] flex items-center justify-center mb-3"><MapPin className="h-6 w-6" /></span>
-      <p className="text-[13.5px] text-[#1B2A28]">{msg}</p>
+      <span className="mx-auto h-12 w-12 rounded-full bg-[#FF9933]/15 text-[#FFB066] flex items-center justify-center mb-3"><MapPin className="h-6 w-6" /></span>
+      <p className="text-[13.5px] text-[#EEF4FF]">{msg}</p>
       {locStatus !== "unsupported" && (
-        <button onClick={retryLocation} className="mt-4 rounded-2xl bg-[#2F6B4A] text-white py-2.5 px-6 text-[13px] font-bold">Try again</button>
+        <button onClick={retryLocation} className="mt-4 rounded-2xl bg-[#3D7BFF] text-white py-2.5 px-6 text-[13px] font-bold">Try again</button>
       )}
     </div>
   );

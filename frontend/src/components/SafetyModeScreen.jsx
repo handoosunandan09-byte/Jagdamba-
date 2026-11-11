@@ -57,7 +57,7 @@ const SafetyModeScreen = ({ onBack, onManageContacts }) => {
       <ScreenHeader title="Safety Mode" subtitle="Timed check-ins with your circle" onBack={onBack} />
       <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-4 float-up">
         <div className="relative flex items-center justify-center my-4" style={{ height: 240 }}>
-          {active && <span className="absolute h-[180px] w-[180px] rounded-full bg-[#2F6B4A]/25 pulse-ring" />}
+          {active && <span className="absolute h-[180px] w-[180px] rounded-full bg-[#3D7BFF]/25 pulse-ring" />}
           <div
             className="h-[180px] w-[180px] rounded-full flex flex-col items-center justify-center text-white shadow-[0_18px_40px_-12px_rgba(28,140,120,0.6)]"
             style={{ background: active
@@ -72,7 +72,7 @@ const SafetyModeScreen = ({ onBack, onManageContacts }) => {
 
         {!active && (
           <>
-            <p className="text-[13px] font-semibold text-[#6B7A77] mb-3">Check-in interval</p>
+            <p className="text-[13px] font-semibold text-[#93A3CC] mb-3">Check-in interval</p>
             <div className="grid grid-cols-3 gap-3 mb-5">
               {durations.map((d) => (
                 <button
@@ -80,8 +80,8 @@ const SafetyModeScreen = ({ onBack, onManageContacts }) => {
                   onClick={() => setSelected(d)}
                   className={`rounded-2xl border py-4 flex flex-col items-center transition-all ${
                     selected === d
-                      ? "border-[#E5603C] bg-[#FBEAE3] text-[#E5603C]"
-                      : "border-[#EFE7DB] bg-white text-[#1B2A28] hover:border-[#E5603C]/40"
+                      ? "border-[#E5603C] bg-[#FF9933]/15 text-[#FFB066]"
+                      : "border-[#78BEFF]/20 bg-[#0E1A3A] text-[#EEF4FF] hover:border-[#E5603C]/40"
                   }`}
                 >
                   <Clock className="h-5 w-5 mb-1" />
@@ -93,17 +93,17 @@ const SafetyModeScreen = ({ onBack, onManageContacts }) => {
           </>
         )}
 
-        <div className="bg-white rounded-2xl border border-[#EFE7DB] p-4 flex items-center justify-between mb-5">
+        <div className="bg-[#0E1A3A] rounded-2xl border border-[#78BEFF]/20 p-4 flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <span className="h-9 w-9 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center"><UserPlus className="h-4.5 w-4.5" /></span>
+            <span className="h-9 w-9 rounded-full bg-[#56E6FF]/10 text-[#56E6FF] flex items-center justify-center"><UserPlus className="h-4.5 w-4.5" /></span>
             <div>
-              <p className="text-[14px] font-bold text-[#1B2A28]">Trusted contact{contacts && contacts.length > 1 ? "s" : ""}</p>
-              <p className="text-[12px] text-[#6B7A77]">
+              <p className="text-[14px] font-bold text-[#EEF4FF]">Trusted contact{contacts && contacts.length > 1 ? "s" : ""}</p>
+              <p className="text-[12px] text-[#93A3CC]">
                 {contacts == null ? "Loading…" : contacts.length === 0 ? "None added yet" : `${contacts[0].name} • ${contacts[0].phone}${contacts.length > 1 ? ` +${contacts.length - 1} more` : ""}`}
               </p>
             </div>
           </div>
-          <button onClick={onManageContacts} className="text-[12px] font-semibold text-[#2F6B4A]">{contacts && contacts.length === 0 ? "Add" : "Change"}</button>
+          <button onClick={onManageContacts} className="text-[12px] font-semibold text-[#56E6FF]">{contacts && contacts.length === 0 ? "Add" : "Change"}</button>
         </div>
 
         {!active ? (
@@ -111,7 +111,7 @@ const SafetyModeScreen = ({ onBack, onManageContacts }) => {
             Start Safety Mode
           </button>
         ) : (
-          <button onClick={stop} className="w-full rounded-2xl bg-white border-2 border-[#E5603C] text-[#E5603C] py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#FBEAE3] transition-colors">
+          <button onClick={stop} className="w-full rounded-2xl bg-[#0E1A3A] border-2 border-[#E5603C] text-[#FFB066] py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#FF9933]/15 transition-colors">
             <Square className="h-4 w-4 fill-current" /> Stop & mark me safe
           </button>
         )}

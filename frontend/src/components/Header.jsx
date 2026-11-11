@@ -1,26 +1,24 @@
 import React from "react";
 import { useUser } from "../context/UserContext";
-import { ShieldCheck } from "lucide-react";
 
 const Header = ({ onProfile }) => {
   const { profile } = useUser();
   return (
-    <header className="flex items-center justify-between px-5 pt-5 pb-3">
-      <div className="flex items-center gap-2.5">
-        <div className="relative h-9 w-9 shrink-0 rounded-xl bg-[#E4EEE2] flex items-center justify-center">
-          <ShieldCheck className="h-5 w-5 text-[#2F6B4A]" strokeWidth={2.4} />
-        </div>
-        <h1 className="text-[20px] font-extrabold tracking-tight text-[#2F6B4A]">Jagdamba</h1>
-      </div>
+    <header className="flex items-center justify-between px-5 pt-4 pb-2">
       <div className="flex items-center gap-2">
+        <svg viewBox="0 0 200 232" width="26" height="30" aria-hidden="true">
+          <path d="M100 10 L180 38 C180 122 158 182 100 222 C42 182 20 122 20 38 Z" fill="rgba(86,230,255,0.12)" stroke="#56E6FF" strokeWidth="12" />
+          <path d="M100 64 L138 130 L62 130 Z M100 152 L62 86 L138 86 Z" fill="none" stroke="#F4C26B" strokeWidth="10" strokeLinejoin="round" />
+        </svg>
+        <h1 className="font-holo-script holo-wordmark text-[42px] leading-none pr-2 pt-1">Jagdamba</h1>
+      </div>
       <button
-        className="h-9 w-9 rounded-full bg-[#E4EEE2] text-[#2F6B4A] text-[12px] font-bold flex items-center justify-center hover:bg-[#d7e6d4] transition-colors"
-        aria-label="Profile avatar"
+        className="h-11 w-11 rounded-full border border-[#78BEFF]/30 bg-[#3D7BFF]/20 text-[#EEF4FF] text-[12px] font-semibold flex items-center justify-center hover:bg-[#3D7BFF]/30 transition-colors"
+        aria-label="Open profile"
         onClick={onProfile}
       >
         {profile?.initials}
       </button>
-      </div>
     </header>
   );
 };

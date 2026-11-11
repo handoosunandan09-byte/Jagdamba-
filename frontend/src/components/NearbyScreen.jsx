@@ -47,7 +47,7 @@ const NearbyScreen = ({ onBack, onOpenMap }) => {
         <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3">
           {filters.map((f) => (
             <button key={f.id} onClick={() => setFilter(f.id)}
-              className={`shrink-0 text-[12px] font-semibold rounded-full px-3 py-1.5 transition-colors ${filter === f.id ? "bg-[#2F6B4A] text-white" : "bg-[#E4EEE2] text-[#2F6B4A]"}`}>
+              className={`shrink-0 text-[12px] font-semibold rounded-full px-3 py-1.5 transition-colors ${filter === f.id ? "bg-[#3D7BFF] text-white" : "bg-[#56E6FF]/10 text-[#56E6FF]"}`}>
               {f.label}
             </button>
           ))}
@@ -55,18 +55,18 @@ const NearbyScreen = ({ onBack, onOpenMap }) => {
 
         <LocationGate>
           {isLoading && (
-            <div className="flex items-center justify-center gap-2 py-10 text-[#6B7A77] text-[13px]">
+            <div className="flex items-center justify-center gap-2 py-10 text-[#93A3CC] text-[13px]">
               <Loader2 className="h-5 w-5 animate-spin" /> Searching OpenStreetMap near you…
             </div>
           )}
           {isError && (
             <div className="text-center py-8">
-              <p className="text-[14px] font-semibold text-[#1B2A28]">Couldn&apos;t load nearby places</p>
-              <button onClick={() => refetch()} className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#2F6B4A]"><RefreshCw className="h-4 w-4" /> Retry</button>
+              <p className="text-[14px] font-semibold text-[#EEF4FF]">Couldn&apos;t load nearby places</p>
+              <button onClick={() => refetch()} className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#56E6FF]"><RefreshCw className="h-4 w-4" /> Retry</button>
             </div>
           )}
           {data && places.length === 0 && (
-            <p className="text-center text-[13px] text-[#6B7A77] py-8">No {filter === "all" ? "places" : filters.find((f) => f.id === filter).label.toLowerCase()} found within reach on OpenStreetMap.</p>
+            <p className="text-center text-[13px] text-[#93A3CC] py-8">No {filter === "all" ? "places" : filters.find((f) => f.id === filter).label.toLowerCase()} found within reach on OpenStreetMap.</p>
           )}
 
           <div className="space-y-3">
@@ -74,24 +74,24 @@ const NearbyScreen = ({ onBack, onOpenMap }) => {
               const Icon = typeIcon[p.type] || ShieldAlert;
               const phone = p.phone ? p.phone.split(";")[0].trim() : fallbackPhone[p.type];
               return (
-                <div key={p.id} className="bg-white rounded-2xl border border-[#EFE7DB] p-4 flex items-center gap-3">
-                  <span className="h-11 w-11 shrink-0 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center"><Icon className="h-5 w-5" /></span>
+                <div key={p.id} className="bg-[#0E1A3A] rounded-2xl border border-[#78BEFF]/20 p-4 flex items-center gap-3">
+                  <span className="h-11 w-11 shrink-0 rounded-full bg-[#56E6FF]/10 text-[#56E6FF] flex items-center justify-center"><Icon className="h-5 w-5" /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[14.5px] font-bold text-[#1B2A28] truncate">{p.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5 text-[12px] text-[#6B7A77]">
+                    <p className="text-[14.5px] font-bold text-[#EEF4FF] truncate">{p.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-[12px] text-[#93A3CC]">
                       <span>{p.type_label}</span>
                       <span className="h-1 w-1 rounded-full bg-[#CBD4D1]" />
                       <span>{formatDistance(p.distance_m)}</span>
-                      {p.open === true && <span className="font-semibold text-[#2F6B4A]">{p.opening_hours === "24/7" ? "24/7" : "Open"}</span>}
+                      {p.open === true && <span className="font-semibold text-[#56E6FF]">{p.opening_hours === "24/7" ? "24/7" : "Open"}</span>}
                     </div>
-                    {p.address && <p className="text-[11px] text-[#9AA7A3] truncate mt-0.5">{p.address}</p>}
+                    {p.address && <p className="text-[11px] text-[#7484AE] truncate mt-0.5">{p.address}</p>}
                   </div>
                   {phone && (
                     <a href={`tel:${phone}`} className="h-9 w-9 rounded-full bg-[#E5603C] text-white flex items-center justify-center hover:bg-[#d9542f] transition-colors" aria-label={`Call ${phone}`} title={p.phone ? phone : `${phone} (helpline)`}>
                       <Phone className="h-4 w-4" />
                     </a>
                   )}
-                  <a href={directionsUrl(p.lat, p.lng)} target="_blank" rel="noreferrer" className="h-9 w-9 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center hover:bg-[#d7e6d4] transition-colors" aria-label="Directions">
+                  <a href={directionsUrl(p.lat, p.lng)} target="_blank" rel="noreferrer" className="h-9 w-9 rounded-full bg-[#56E6FF]/10 text-[#56E6FF] flex items-center justify-center hover:bg-[#56E6FF]/10 transition-colors" aria-label="Directions">
                     <Navigation className="h-4 w-4" />
                   </a>
                 </div>
@@ -99,7 +99,7 @@ const NearbyScreen = ({ onBack, onOpenMap }) => {
             })}
           </div>
           {data && (
-            <p className="text-[10.5px] text-[#9AA7A3] text-center mt-4">
+            <p className="text-[10.5px] text-[#7484AE] text-center mt-4">
               {isFetching ? "Refreshing…" : "Place data © OpenStreetMap contributors"}
             </p>
           )}

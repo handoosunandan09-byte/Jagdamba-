@@ -40,12 +40,12 @@ const ReportScreen = ({ onBack }) => {
       <div className="flex flex-col h-full">
         <ScreenHeader title="Report submitted" onBack={onBack} />
         <div className="flex-1 flex flex-col items-center justify-center px-8 text-center float-up">
-          <span className="h-20 w-20 rounded-full bg-[#E4EEE2] text-[#2F6B4A] flex items-center justify-center mb-5 pop-in">
+          <span className="h-20 w-20 rounded-full bg-[#56E6FF]/10 text-[#56E6FF] flex items-center justify-center mb-5 pop-in">
             <CheckCircle2 className="h-10 w-10" />
           </span>
-          <h3 className="text-[20px] font-extrabold text-[#1B2A28]">Thank you{firstName ? `, ${firstName}` : ""}!</h3>
-          <p className="text-[14px] text-[#6B7A77] mt-2">Your report has been logged and is now visible to people nearby in Community Alerts.</p>
-          <p className="text-[12px] text-[#9AA7A3] mt-2">Ticket #{ticket}</p>
+          <h3 className="text-[20px] font-extrabold text-[#EEF4FF]">Thank you{firstName ? `, ${firstName}` : ""}!</h3>
+          <p className="text-[14px] text-[#93A3CC] mt-2">Your report has been logged and is now visible to people nearby in Community Alerts.</p>
+          <p className="text-[12px] text-[#7484AE] mt-2">Ticket #{ticket}</p>
           <button onClick={onBack} className="mt-7 w-full rounded-2xl bg-[#E5603C] text-white py-3.5 text-[15px] font-bold hover:bg-[#d9542f] transition-colors">Back to Home</button>
         </div>
       </div>
@@ -56,18 +56,18 @@ const ReportScreen = ({ onBack }) => {
     <div className="flex flex-col h-full">
       <ScreenHeader title="Report a Civic Issue" subtitle="Help improve your neighbourhood" onBack={onBack} />
       <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-4 float-up space-y-4">
-        <div className="bg-white rounded-2xl border border-[#EFE7DB] p-3.5 flex items-center gap-3">
-          <span className="h-9 w-9 rounded-full bg-[#FBEAE3] text-[#E5603C] flex items-center justify-center"><MapPin className="h-4.5 w-4.5" /></span>
+        <div className="bg-[#0E1A3A] rounded-2xl border border-[#78BEFF]/20 p-3.5 flex items-center gap-3">
+          <span className="h-9 w-9 rounded-full bg-[#FF9933]/15 text-[#FFB066] flex items-center justify-center"><MapPin className="h-4.5 w-4.5" /></span>
           <div>
-            <p className="text-[12px] text-[#6B7A77]">Detected location</p>
-            <p className="text-[14px] font-bold text-[#1B2A28]">{locationLabel || (locStatus === "denied" ? "Location blocked — report won't appear on the map" : "Locating…")}</p>
+            <p className="text-[12px] text-[#93A3CC]">Detected location</p>
+            <p className="text-[14px] font-bold text-[#EEF4FF]">{locationLabel || (locStatus === "denied" ? "Location blocked — report won't appear on the map" : "Locating…")}</p>
           </div>
         </div>
 
         <div>
-          <label className="text-[13px] font-semibold text-[#1B2A28] mb-2 block">Category</label>
+          <label className="text-[13px] font-semibold text-[#EEF4FF] mb-2 block">Category</label>
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-full bg-white border-[#EFE7DB] rounded-2xl h-12 text-[14px]">
+            <SelectTrigger className="w-full bg-[#0E1A3A] border-[#78BEFF]/20 rounded-2xl h-12 text-[14px]">
               <SelectValue placeholder="Select an issue type" />
             </SelectTrigger>
             <SelectContent>
@@ -79,17 +79,17 @@ const ReportScreen = ({ onBack }) => {
         </div>
 
         <div>
-          <label className="text-[13px] font-semibold text-[#1B2A28] mb-2 block">Description</label>
+          <label className="text-[13px] font-semibold text-[#EEF4FF] mb-2 block">Description</label>
           <textarea
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
             rows={4}
             placeholder="Describe what you noticed…"
-            className="w-full bg-white border border-[#EFE7DB] rounded-2xl p-4 text-[14px] text-[#1B2A28] placeholder:text-[#9AA7A3] outline-none focus:border-[#E5603C]/50 resize-none"
+            className="w-full bg-[#0E1A3A] border border-[#78BEFF]/20 rounded-2xl p-4 text-[14px] text-[#EEF4FF] placeholder:text-[#7484AE] outline-none focus:border-[#E5603C]/50 resize-none"
           />
         </div>
 
-        <button className="w-full border-2 border-dashed border-[#D8E0DD] rounded-2xl py-5 flex flex-col items-center text-[#6B7A77] hover:border-[#2F6B4A]/50 hover:text-[#2F6B4A] transition-colors">
+        <button className="w-full border-2 border-dashed border-[#D8E0DD] rounded-2xl py-5 flex flex-col items-center text-[#93A3CC] hover:border-[#56E6FF]/50 hover:text-[#56E6FF] transition-colors">
           <Camera className="h-6 w-6 mb-1" />
           <span className="text-[13px] font-medium">Add a photo (optional)</span>
         </button>

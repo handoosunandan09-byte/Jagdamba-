@@ -58,15 +58,15 @@ const TalkScreen = ({ onBack, emergency }) => {
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"} pop-in`}>
             {m.from === "saathi" && (
-              <span className="mt-1 mr-2 h-7 w-7 shrink-0 rounded-full bg-[#17302B] flex items-center justify-center">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#E5603C]" />
+              <span className="mt-1 mr-2 h-7 w-7 shrink-0 rounded-full bg-[#3D7BFF] flex items-center justify-center">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#FFB066]" />
               </span>
             )}
             <div
               className={`max-w-[78%] rounded-2xl px-4 py-2.5 text-[14px] leading-snug whitespace-pre-wrap ${
                 m.from === "user"
                   ? "bg-[#E5603C] text-white rounded-br-md"
-                  : "bg-white border border-[#EFE7DB] text-[#1B2A28] rounded-bl-md"
+                  : "bg-[#0E1A3A] border border-[#78BEFF]/20 text-[#EEF4FF] rounded-bl-md"
               }`}
             >
               {m.text}
@@ -75,13 +75,13 @@ const TalkScreen = ({ onBack, emergency }) => {
         ))}
         {typing && (
           <div className="flex justify-start">
-            <span className="mt-1 mr-2 h-7 w-7 shrink-0 rounded-full bg-[#17302B] flex items-center justify-center">
-              <ShieldCheck className="h-3.5 w-3.5 text-[#E5603C]" />
+            <span className="mt-1 mr-2 h-7 w-7 shrink-0 rounded-full bg-[#3D7BFF] flex items-center justify-center">
+              <ShieldCheck className="h-3.5 w-3.5 text-[#FFB066]" />
             </span>
-            <div className="bg-white border border-[#EFE7DB] rounded-2xl rounded-bl-md px-4 py-3 flex gap-1">
-              <span className="h-2 w-2 rounded-full bg-[#9AA7A3] animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="h-2 w-2 rounded-full bg-[#9AA7A3] animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="h-2 w-2 rounded-full bg-[#9AA7A3] animate-bounce" style={{ animationDelay: "300ms" }} />
+            <div className="bg-[#0E1A3A] border border-[#78BEFF]/20 rounded-2xl rounded-bl-md px-4 py-3 flex gap-1">
+              <span className="h-2 w-2 rounded-full bg-[#4A5A85] animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="h-2 w-2 rounded-full bg-[#4A5A85] animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="h-2 w-2 rounded-full bg-[#4A5A85] animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
           </div>
         )}
@@ -93,29 +93,29 @@ const TalkScreen = ({ onBack, emergency }) => {
             <button
               key={s}
               onClick={() => setInput(s)}
-              className="shrink-0 text-[12px] font-medium text-[#2F6B4A] bg-[#E4EEE2] rounded-full px-3 py-1.5 hover:bg-[#d7e6d4] transition-colors"
+              className="shrink-0 text-[12px] font-medium text-[#56E6FF] bg-[#56E6FF]/10 rounded-full px-3 py-1.5 hover:bg-[#56E6FF]/10 transition-colors"
             >
               {s}
             </button>
           ))}
         </div>
         {listening && (
-          <p className="text-[12px] font-medium text-[#E5603C] mb-2 px-1 flex items-center gap-2">
+          <p className="text-[12px] font-medium text-[#FFB066] mb-2 px-1 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[#E5603C] animate-pulse" /> Listening… speak now
           </p>
         )}
-        <div className="flex items-center gap-2 bg-white border border-[#EFE7DB] rounded-full pl-4 pr-1.5 py-1.5">
+        <div className="flex items-center gap-2 bg-[#0E1A3A] border border-[#78BEFF]/20 rounded-full pl-4 pr-1.5 py-1.5">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
             placeholder="Tell Jagdamba what happened…"
-            className="flex-1 bg-transparent outline-none text-[14px] text-[#1B2A28] placeholder:text-[#9AA7A3]"
+            className="flex-1 bg-transparent outline-none text-[14px] text-[#EEF4FF] placeholder:text-[#7484AE]"
           />
           <button
             onClick={onMic}
             className={`h-9 w-9 rounded-full flex items-center justify-center transition-colors ${
-              listening ? "bg-[#E5603C] text-white animate-pulse" : "bg-[#E4EEE2] text-[#2F6B4A] hover:bg-[#d7e6d4]"
+              listening ? "bg-[#E5603C] text-white animate-pulse" : "bg-[#56E6FF]/10 text-[#56E6FF] hover:bg-[#56E6FF]/10"
             }`}
             aria-label="Voice input"
           >

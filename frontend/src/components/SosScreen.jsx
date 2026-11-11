@@ -60,7 +60,7 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
   return (
     <div className="flex flex-col h-full saathi-shell">
       <div className="flex justify-end p-4">
-        <button onClick={onCancel} className="h-9 w-9 rounded-full bg-white border border-[#EFE7DB] flex items-center justify-center text-[#1B2A28] hover:bg-[#F3ECE1] transition-colors" aria-label="Close">
+        <button onClick={onCancel} className="h-9 w-9 rounded-full bg-[#0E1A3A] border border-[#78BEFF]/20 flex items-center justify-center text-[#EEF4FF] hover:bg-[#13234D] transition-colors" aria-label="Close">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -78,18 +78,18 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
 
         {busy && (
           <>
-            <h2 className="text-[22px] font-extrabold text-[#1B2A28] flex items-center gap-2">
-              <Loader2 className="h-5 w-5 animate-spin text-[#E5603C]" />
+            <h2 className="text-[22px] font-extrabold text-[#EEF4FF] flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin text-[#FFB066]" />
               {stage === "locating" ? "Getting your location…" : "Alerting your circle…"}
             </h2>
-            <p className="text-[14px] text-[#6B7A77] mt-2 max-w-[280px]">Hang tight{firstName ? `, ${firstName}` : ""}. We&apos;re sending your live location to your trusted contacts.</p>
+            <p className="text-[14px] text-[#93A3CC] mt-2 max-w-[280px]">Hang tight{firstName ? `, ${firstName}` : ""}. We&apos;re sending your live location to your trusted contacts.</p>
           </>
         )}
 
         {stage === "nocontacts" && (
           <div className="float-up">
-            <h2 className="text-[20px] font-extrabold text-[#1B2A28]">Add a trusted contact first</h2>
-            <p className="text-[14px] text-[#6B7A77] mt-2 max-w-[280px] mx-auto">To send an SOS, add at least one person we can alert with your live location.</p>
+            <h2 className="text-[20px] font-extrabold text-[#EEF4FF]">Add a trusted contact first</h2>
+            <p className="text-[14px] text-[#93A3CC] mt-2 max-w-[280px] mx-auto">To send an SOS, add at least one person we can alert with your live location.</p>
             <button onClick={onManageContacts} className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[#E5603C] text-white py-3.5 px-7 text-[15px] font-bold hover:bg-[#d9542f] transition-colors">
               <UserPlus className="h-5 w-5" /> Add contact
             </button>
@@ -98,8 +98,8 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
 
         {stage === "shared" && (
           <div className="float-up w-full">
-            <h2 className="text-[22px] font-extrabold text-[#1B2A28]">{sentCount > 0 ? "Alert sent" : "Alert ready to send"}</h2>
-            <p className="text-[14px] text-[#6B7A77] mt-2">
+            <h2 className="text-[22px] font-extrabold text-[#EEF4FF]">{sentCount > 0 ? "Alert sent" : "Alert ready to send"}</h2>
+            <p className="text-[14px] text-[#93A3CC] mt-2">
               {sentCount > 0
                 ? `Your live location was sent automatically to ${sentCount} of ${recipients.length} trusted contact${recipients.length !== 1 ? "s" : ""}.`
                 : "Tap WhatsApp next to each contact to send them your live location."}
@@ -108,24 +108,24 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
 
             {/* Message preview */}
             <div className="mt-3 text-left">
-              <p className="text-[12px] font-semibold text-[#6B7A77] mb-1.5 px-1">Message</p>
-              <div className="bg-[#E4EEE2] rounded-2xl rounded-bl-md p-3.5 text-[13px] text-[#14433A] leading-snug">
+              <p className="text-[12px] font-semibold text-[#93A3CC] mb-1.5 px-1">Message</p>
+              <div className="bg-[#56E6FF]/10 rounded-2xl rounded-bl-md p-3.5 text-[13px] text-[#BFE9FF] leading-snug">
                 {result?.message}
               </div>
-              <a href={result?.maps_link} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-[13px] font-semibold text-[#2F6B4A] bg-white border border-[#EFE7DB] rounded-full px-4 py-2 hover:bg-[#F3ECE1] transition-colors">
+              <a href={result?.maps_link} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-[13px] font-semibold text-[#56E6FF] bg-[#0E1A3A] border border-[#78BEFF]/20 rounded-full px-4 py-2 hover:bg-[#13234D] transition-colors">
                 <MapPin className="h-4 w-4" /> Open shared location <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </div>
 
             {result?.nearest_police && (
-              <p className="text-[12px] text-[#6B7A77] mt-3">Nearest police: <span className="font-semibold text-[#1B2A28]">{result.nearest_police.name}</span> ({result.nearest_police.distance_m} m)</p>
+              <p className="text-[12px] text-[#93A3CC] mt-3">Nearest police: <span className="font-semibold text-[#EEF4FF]">{result.nearest_police.name}</span> ({result.nearest_police.distance_m} m)</p>
             )}
 
             <div className="mt-6 space-y-3 pb-4">
               <button onClick={onTalk} className="w-full rounded-2xl bg-[#E5603C] text-white py-4 text-[15px] font-bold flex items-center justify-center gap-2 shadow-[0_12px_28px_-10px_rgba(229,96,60,0.6)] hover:bg-[#d9542f] transition-colors">
                 <MessageCircle className="h-5 w-5" /> Talk to Jagdamba now
               </button>
-              <button onClick={onCancel} className="w-full rounded-2xl bg-white border border-[#EFE7DB] text-[#1B2A28] py-3.5 text-[15px] font-semibold hover:bg-[#F3ECE1] transition-colors">
+              <button onClick={onCancel} className="w-full rounded-2xl bg-[#0E1A3A] border border-[#78BEFF]/20 text-[#EEF4FF] py-3.5 text-[15px] font-semibold hover:bg-[#13234D] transition-colors">
                 I&apos;m safe now
               </button>
             </div>
@@ -134,8 +134,8 @@ const SosScreen = ({ onCancel, onTalk, onManageContacts }) => {
 
         {stage === "error" && (
           <div className="float-up">
-            <h2 className="text-[20px] font-extrabold text-[#1B2A28]">Couldn&apos;t send alert</h2>
-            <p className="text-[14px] text-[#6B7A77] mt-2">Please check your connection and try again.</p>
+            <h2 className="text-[20px] font-extrabold text-[#EEF4FF]">Couldn&apos;t send alert</h2>
+            <p className="text-[14px] text-[#93A3CC] mt-2">Please check your connection and try again.</p>
             <button onClick={run} className="mt-6 rounded-2xl bg-[#E5603C] text-white py-3 px-8 text-[15px] font-bold hover:bg-[#d9542f] transition-colors">Retry</button>
           </div>
         )}
