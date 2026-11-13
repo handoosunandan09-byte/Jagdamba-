@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Jagdamba</string>
+    <string name="title_activity_main">Jagdamba</string>
+    <string name="package_name">com.podtech.jagdamba</string>
+    <string name="custom_url_scheme">com.podtech.jagdamba</string>
+</resources>

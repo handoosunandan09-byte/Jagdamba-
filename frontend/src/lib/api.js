@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// Netlify sets REACT_APP_BACKEND_URL. Android builds made on a laptop may not have it,
+// so fall back to the live Render backend (a public address, not a secret).
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://jagdamba-backend-wz8e.onrender.com";
 export const API = `${BACKEND_URL}/api`;
 
 // Stable per-browser id. Profile, contacts and SOS history are scoped to it.

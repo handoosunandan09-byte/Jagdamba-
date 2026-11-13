@@ -95,3 +95,8 @@ frontend/node_modules/.cache/default-development/5.pack
 credentials.json
 *.key
 .credentials
+
+# Android signing keys - NEVER commit these
+*.jks
+*.keystore
+keystore.properties
