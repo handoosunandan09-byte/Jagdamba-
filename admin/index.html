@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#02050F" />
+  <title>Jagdamba Admin</title>
+  <link rel="icon" href="icon.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icon.png" alt="" width="32" height="32" />
+      <div>
+        <div class="brand-name">Jagdamba Admin</div>
+        <div class="brand-sub">Private console</div>
+      </div>
+    </div>
+    <div class="who" id="who" hidden>
+      <span id="who-email"></span>
+      <button class="btn-ghost" id="signout" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Status: waking server, errors -->
+    <section class="status" id="status" role="status" aria-live="polite" hidden>
+      <div class="spinner" id="status-spinner"></div>
+      <div>
+        <div class="status-title" id="status-title"></div>
+        <div class="status-text" id="status-text"></div>
+      </div>
+      <button class="btn" id="status-retry" type="button" hidden>Try again</button>
+    </section>
+
+    <!-- Sign in -->
+    <section class="card signin" id="signin" hidden>
+      <h1>Sign in</h1>
+      <p>Use your approved Google account. Nobody else can open this console.</p>
+      <div id="google-button"></div>
+    </section>
+
+    <!-- Console -->
+    <section id="console" hidden>
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button role="tab" id="tab-users" aria-controls="panel-users" aria-selected="true">Users</button>
+        <button role="tab" id="tab-payments" aria-controls="panel-payments" aria-selected="false" tabindex="-1">Payments</button>
+        <div class="tabs-right">
+          <span class="updated" id="updated"></span>
+          <button class="btn-ghost" id="refresh" type="button">Refresh</button>
+        </div>
+      </nav>
+
+      <!-- USERS -->
+      <div role="tabpanel" id="panel-users" aria-labelledby="tab-users">
+        <div class="hero-row">
+          <div class="tile hero"><div class="label">Registered users</div><div class="value" id="u-registered">–</div><div class="hint">Completed the app's setup</div></div>
+          <div class="tile hero"><div class="label">Active today</div><div class="value" id="u-active-day">–</div><div class="hint">Opened the app in the last 24 hours</div></div>
+        </div>
+        <div class="tile-row">
+          <div class="tile"><div class="label">Active this week</div><div class="value" id="u-active-week">–</div></div>
+          <div class="tile"><div class="label">Active this month</div><div class="value" id="u-active-month">–</div></div>
+          <div class="tile"><div class="label">New this week</div><div class="value" id="u-new-week">–</div></div>
+          <div class="tile"><div class="label">New this month</div><div class="value" id="u-new-month">–</div></div>
+          <div class="tile"><div class="label">Have trusted contacts</div><div class="value" id="u-contacts">–</div></div>
+        </div>
+        <div class="card chart-card">
+          <h2>New registrations per day <span class="muted">(last 30 days)</span></h2>
+          <div class="chart" id="chart-users"></div>
+          <details><summary>Show as table</summary><div id="table-users"></div></details>
+        </div>
+        <p class="note" id="u-note"></p>
+      </div>
+
+      <!-- PAYMENTS -->
+      <div role="tabpanel" id="panel-payments" aria-labelledby="tab-payments" hidden>
+        <div class="banner" id="p-banner" hidden>
+          Google Play billing is not live yet, so everything here shows zero. It fills in automatically once the ₹99 subscription launches.
+        </div>
+        <div class="hero-row">
+          <div class="tile hero"><div class="label">Active subscriptions</div><div class="value" id="p-active">–</div><div class="hint">Paying now (including payment grace period)</div></div>
+          <div class="tile hero"><div class="label">Net revenue, last 30 days</div><div class="value" id="p-net-30">–</div><div class="hint">Before Google's fee and GST</div></div>
+        </div>
+        <div class="tile-row">
+          <div class="tile"><div class="label">Payments, all time</div><div class="value" id="p-payments">–</div></div>
+          <div class="tile"><div class="label">Renewals, all time</div><div class="value" id="p-renewals">–</div></div>
+          <div class="tile"><div class="label">Cancelling</div><div class="value" id="p-cancelling">–</div><div class="hint">Turned off renewal, still active</div></div>
+          <div class="tile"><div class="label">Expired</div><div class="value" id="p-expired">–</div></div>
+          <div class="tile"><div class="label">Refunds, all time</div><div class="value" id="p-refunds">–</div></div>
+          <div class="tile"><div class="label">Net revenue, all time</div><div class="value" id="p-net-all">–</div></div>
+        </div>
+        <div class="card chart-card">
+          <h2>Payments per day <span class="muted">(new + renewals, last 30 days)</span></h2>
+          <div class="chart" id="chart-payments"></div>
+          <details><summary>Show as table</summary><div id="table-payments"></div></details>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+</body>
+</html>

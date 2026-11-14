@@ -3,9 +3,12 @@ services:
     name: jagdamba-backend
     runtime: python
     rootDir: backend
+    # Paid "starter" (0.5 CPU / 512 MB, never sleeps) is chosen in the Render dashboard.
+    # Changing this line to "starter" and syncing the Blueprint would also switch it (and start billing).
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT --proxy-headers --timeout-keep-alive 30
+    healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -31,4 +34,9 @@ services:
         value: "+91"
       # Identify the app to OpenStreetMap services (put your email in it)
       - key: OSM_USER_AGENT
+        sync: false
+      # Admin console: Google sign-in client ID, and the Google email(s) allowed in
+      - key: ADMIN_GOOGLE_CLIENT_ID
+        sync: false
+      - key: ADMIN_EMAILS
         sync: false
