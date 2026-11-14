@@ -1,4 +1,4 @@
-package com.podtech.jagdamba;
+package com.jagdamba.safety;
 
 import com.getcapacitor.BridgeActivity;
 
