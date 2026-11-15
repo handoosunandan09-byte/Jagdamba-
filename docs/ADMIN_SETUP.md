@@ -12,16 +12,16 @@ You'll set up five things, in this order. Each one is a few clicks.
 
 ---
 
-## Part A. Server that never sleeps (paid, US$7/month)
+## Part A. Server that never sleeps (paid, US$7/month) — later
 
 Your Render service is **Blueprint managed**, which means `render.yaml` in the code decides its settings.
-The code now sets the paid plan (`plan: starter`, 0.5 CPU / 512 MB) and the health check (`/api/health`).
+It is on the **free** plan for now, so the console may take about a minute to open after a quiet period.
+The health check (`/api/health`) is already set in `render.yaml`.
 
-1. **Before merging the code into `main`**, add a payment card in Render: click your profile (top right) →
-   **Billing** → add a card. Without a card, Render can't switch to the paid plan.
-2. When the code is merged into `main`, Render applies the paid plan and starts billing.
-   You don't need to change the plan or the health check in the dashboard.
-3. The old "Keep backend awake" job has been removed. It pinged an old address, and a paid server doesn't sleep.
+When you're ready to upgrade:
+1. Add a payment card in Render: profile (top right) → **Billing** → add a card.
+2. In `render.yaml`, change `plan: free` to `plan: starter`, then merge that change into `main`.
+   Render switches plans and starts billing US$7/month.
 
 ## Part B. Upgrade the database (paid, US$8/month base, maximum US$30)
 

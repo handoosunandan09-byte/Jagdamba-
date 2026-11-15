@@ -3,9 +3,10 @@ services:
     name: jagdamba-backend
     runtime: python
     rootDir: backend
-    # Paid plan: 0.5 CPU / 512 MB, US$7/month, never sleeps (approved by the owner).
     # This service is Blueprint-managed, so this line decides the plan.
-    plan: starter
+    # Free for now (sleeps when idle). To upgrade: add a card in Render Billing, then change
+    # this to "starter" (0.5 CPU / 512 MB, US$7/month, never sleeps) and merge into main.
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT --proxy-headers --timeout-keep-alive 30
     healthCheckPath: /api/health
