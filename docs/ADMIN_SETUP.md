@@ -12,15 +12,16 @@ You'll set up five things, in this order. Each one is a few clicks.
 
 ---
 
-## Part A. Upgrade the server so it never sleeps (paid, US$7/month)
+## Part A. Server that never sleeps (paid, US$7/month)
 
-1. Go to https://dashboard.render.com and open **jagdamba-backend**.
-2. Click **Settings**, find **Instance Type** (it may be called **Compute plan**), and choose the
-   **0.5 CPU / 512 MB plan ($7/month, previously called "Starter")**. Confirm.
-3. On the same Settings page, find **Health Check Path**, enter `/api/health`, and save.
-   Render then checks every few seconds that the server and database are working, and restarts it if they aren't.
-4. After the upgrade, the "Keep backend awake" job in GitHub is no longer needed. You can turn it off later in
-   GitHub → **Actions** → **Keep backend awake** → **⋯** → **Disable workflow**.
+Your Render service is **Blueprint managed**, which means `render.yaml` in the code decides its settings.
+The code now sets the paid plan (`plan: starter`, 0.5 CPU / 512 MB) and the health check (`/api/health`).
+
+1. **Before merging the code into `main`**, add a payment card in Render: click your profile (top right) →
+   **Billing** → add a card. Without a card, Render can't switch to the paid plan.
+2. When the code is merged into `main`, Render applies the paid plan and starts billing.
+   You don't need to change the plan or the health check in the dashboard.
+3. The old "Keep backend awake" job has been removed. It pinged an old address, and a paid server doesn't sleep.
 
 ## Part B. Upgrade the database (paid, US$8/month base, maximum US$30)
 

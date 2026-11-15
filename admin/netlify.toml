@@ -14,5 +14,5 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     Cross-Origin-Opener-Policy = "same-origin-allow-popups"
     Strict-Transport-Security = "max-age=31536000"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://jagdamba-backend-wz8e.onrender.com https://accounts.google.com/gsi/; img-src 'self' data: https://*.googleusercontent.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://jagdamba-backend-tzez.onrender.com https://accounts.google.com/gsi/; img-src 'self' data: https://*.googleusercontent.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     Cache-Control = "no-cache"
