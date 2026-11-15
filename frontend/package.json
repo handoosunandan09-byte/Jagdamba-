@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@capacitor/android": "8.6.2",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/splash-screen": "8.0.2",
     "@hookform/resolvers": "5.0.1",
     "@radix-ui/react-accordion": "1.2.8",
     "@radix-ui/react-alert-dialog": "1.1.11",
@@ -65,7 +68,10 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build",
-    "test": "craco test"
+    "test": "craco test",
+    "android:sync": "craco build && cap sync android",
+    "android:open": "cap open android",
+    "android:assets": "capacitor-assets generate --android --iconBackgroundColor #02050F --iconBackgroundColorDark #02050F --splashBackgroundColor #02050F --splashBackgroundColorDark #02050F"
   },
   "resolutions": {
     "react-router": "7.18.4",
@@ -126,6 +132,8 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "7.21.11",
+    "@capacitor/assets": "4.0.0",
+    "@capacitor/cli": "8.6.2",
     "@craco/craco": "7.1.0",
     "@eslint/js": "9.23.0",
     "@types/lodash": "4.17.24",

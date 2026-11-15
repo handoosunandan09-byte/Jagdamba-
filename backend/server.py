@@ -22,6 +22,7 @@ import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
+from collections import OrderedDict
 import uuid
 import json
 from datetime import datetime, timezone, timedelta
@@ -133,6 +134,48 @@ class TTLCache:
         self._d[key] = (time.time(), value)
 
 
+class RateLimiter:
+    """In-memory sliding-window limits (one server instance). Stops one phone or one
+    attacker from flooding SOS texts, the assistant or the database."""
+
+    def __init__(self, max_keys: int = 50000):
+        self._hits: Dict[str, List[float]] = {}
+        self.max_keys = max_keys
+
+    def allow(self, key: str, limit: int, window_s: int) -> bool:
+        now = time.time()
+        hits = [t for t in self._hits.get(key, []) if now - t < window_s]
+        if len(hits) >= limit:
+            self._hits[key] = hits
+            return False
+        hits.append(now)
+        if len(self._hits) >= self.max_keys and key not in self._hits:
+            self._hits.pop(next(iter(self._hits)))
+        self._hits[key] = hits
+        return True
+
+
+_limiter = RateLimiter()
+
+
+def client_ip(request: Request) -> str:
+    # Render puts the real client address first in X-Forwarded-For
+    fwd = request.headers.get('x-forwarded-for') or ''
+    return fwd.split(',')[0].strip() or (request.client.host if request.client else 'unknown')
+
+
+def rate_limit(request: Request, name: str, per_device: tuple, per_ip: tuple):
+    did = (request.headers.get('x-device-id') or '').strip()
+    ok = _limiter.allow(f"{name}:ip:{client_ip(request)}", *per_ip)
+    if ok and did:
+        ok = _limiter.allow(f"{name}:dev:{did}", *per_device)
+    if not ok:
+        raise HTTPException(status_code=429, detail="Too many requests. Please wait a moment and try again.")
+
+
+MAX_CONTACTS = 10
+
+
 _poi_cache = TTLCache(ttl_s=15 * 60)
 _geo_cache = TTLCache(ttl_s=24 * 3600)
 _nominatim_lock = asyncio.Lock()
@@ -190,7 +233,7 @@ async def _overpass(query: str) -> dict:
             except Exception as e:  # try the next mirror
                 last_err = e
                 logger.warning(f"Overpass mirror failed ({url}): {e}")
-    raise HTTPException(status_code=502, detail=f"Map data service unavailable: {last_err}")
+    raise HTTPException(status_code=502, detail="Map data service is unavailable right now")
 
 
 async def fetch_pois(lat: float, lng: float, radius_m: int, types: List[str]) -> List[dict]:
@@ -317,7 +360,8 @@ SAATHI_SYSTEM_PROMPT = (
     "Do not invent phone numbers other than the official helplines above, or numbers given to you in context."
 )
 
-_chat_sessions: dict = {}
+_chat_sessions: "OrderedDict[str, Any]" = OrderedDict()
+MAX_CHAT_SESSIONS = 300  # keeps memory bounded on a small (512 MB) server
 
 OFFLINE_REPLY = (
     "I'm here with you. If you feel unsafe, move to a well-lit, crowded place right now. "
@@ -348,11 +392,16 @@ class GeminiChat:
             data = r.json()
         reply = "".join(p.get("text", "") for p in data["candidates"][0]["content"]["parts"]).strip()
         self.history.append({"role": "model", "parts": [{"text": reply}]})
+        self.history = self.history[-20:]
         return reply or OFFLINE_REPLY
 
 
 def get_chat(session_id: str, system_prompt: str):
-    if session_id not in _chat_sessions:
+    if session_id in _chat_sessions:
+        _chat_sessions.move_to_end(session_id)
+    else:
+        while len(_chat_sessions) >= MAX_CHAT_SESSIONS:
+            _chat_sessions.popitem(last=False)  # forget the least recently used chat
         if HAS_EMERGENT and EMERGENT_LLM_KEY:
             _chat_sessions[session_id] = LlmChat(
                 api_key=EMERGENT_LLM_KEY,
@@ -576,7 +625,8 @@ def _initials(name: str) -> str:
 
 
 async def get_profile_doc(did: str) -> Optional[dict]:
-    return await db.profiles.find_one({"device_id": did}, {"_id": 0})
+    # Internal fields stay on the server
+    return await db.profiles.find_one({"device_id": did}, {"_id": 0, "last_seen": 0, "created_at": 0})
 
 
 # ----------------- Routes: core -----------------
@@ -584,7 +634,7 @@ async def get_profile_doc(did: str) -> Optional[dict]:
 async def root():
     return {
         "message": "Jagdamba API running",
-        "database": "ok" if DB_ERROR is None else f"error: {DB_ERROR}",
+        "database": "ok" if DB_ERROR is None else "error",
         "integrations": {
             "gemini": bool(GEMINI_API_KEY or (HAS_EMERGENT and EMERGENT_LLM_KEY)),
             "twilio_sms": sms_configured(),
@@ -592,6 +642,27 @@ async def root():
             "openstreetmap": True,
         },
     }
+
+
+_health = {"at": 0.0, "ok": False}
+
+
+@api_router.get("/health")
+async def health():
+    """Used by Render (and an uptime monitor) to check the server and database are working."""
+    if time.time() - _health["at"] > 30:
+        ok = False
+        if db is not None and DB_ERROR is None:
+            try:
+                await asyncio.wait_for(client.admin.command("ping"), timeout=5)
+                ok = True
+            except Exception as e:
+                logger.error(f"Health check: database ping failed: {e}")
+        _health.update(at=time.time(), ok=ok)
+    if not _health["ok"]:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=503, content={"ok": False})
+    return {"ok": True}
 
 
 @api_router.get("/config")
@@ -611,14 +682,21 @@ async def get_profile(request: Request):
 @api_router.put("/profile", response_model=Profile)
 async def put_profile(payload: ProfileIn, request: Request):
     did = device_id(request)
+    rate_limit(request, "profile", per_device=(20, 3600), per_ip=(60, 3600))
+    now = datetime.now(timezone.utc)
     doc = {
         "device_id": did,
         "name": payload.name.strip(),
         "phone": (payload.phone or "").strip() or None,
         "initials": _initials(payload.name),
-        "updated_at": datetime.now(timezone.utc),
+        "updated_at": now,
     }
-    await db.profiles.update_one({"device_id": did}, {"$set": doc}, upsert=True)
+    # created_at / last_seen feed the admin console's registration and activity counts
+    await db.profiles.update_one(
+        {"device_id": did},
+        {"$set": {**doc, "last_seen": now}, "$setOnInsert": {"created_at": now}},
+        upsert=True,
+    )
     return Profile(**doc)
 
 
@@ -628,7 +706,8 @@ async def geo_reverse(lat: float, lng: float):
     try:
         return await reverse_geocode(lat, lng)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Geocoding unavailable: {e}")
+        logger.warning(f"Geocoding failed: {e}")
+        raise HTTPException(status_code=502, detail="Location names are unavailable right now")
 
 
 @api_router.get("/nearby")
@@ -650,6 +729,9 @@ async def nearby(
 async def chat(req: ChatRequest, request: Request):
     if not req.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
+    if len(req.message) > 2000 or len(req.session_id) > 100:
+        raise HTTPException(status_code=400, detail="Message is too long")
+    rate_limit(request, "chat", per_device=(30, 600), per_ip=(60, 600))
     try:
         did = request.headers.get('x-device-id')
         profile = await get_profile_doc(did) if did else None
@@ -673,12 +755,13 @@ async def chat(req: ChatRequest, request: Request):
         return ChatResponse(reply=reply, session_id=req.session_id)
     except Exception as e:
         logger.exception("Chat error")
-        raise HTTPException(status_code=500, detail=f"Jagdamba is unavailable right now: {str(e)}")
+        raise HTTPException(status_code=503, detail="Jagdamba is unavailable right now. If you are in danger, call 112.")
 
 
 # ----------------- Routes: reports + community alerts -----------------
 @api_router.post("/reports", response_model=Report)
 async def create_report(payload: ReportCreate, request: Request):
+    rate_limit(request, "report", per_device=(10, 3600), per_ip=(30, 3600))
     location = payload.location
     if not location and payload.lat is not None:
         location = (await safe_reverse(payload.lat, payload.lng)).get('label')
@@ -750,9 +833,13 @@ async def list_contacts(request: Request):
 
 @api_router.post("/contacts", response_model=Contact)
 async def create_contact(payload: ContactCreate, request: Request):
+    did = device_id(request)
+    rate_limit(request, "contact", per_device=(20, 3600), per_ip=(60, 3600))
+    if await db.contacts.count_documents({"device_id": did}) >= MAX_CONTACTS:
+        raise HTTPException(status_code=400, detail=f"You can save up to {MAX_CONTACTS} trusted contacts")
     contact = Contact(**payload.dict())
     doc = contact.dict()
-    doc['device_id'] = device_id(request)
+    doc['device_id'] = did
     await db.contacts.insert_one(doc)
     return contact
 
@@ -769,6 +856,8 @@ async def delete_contact(contact_id: str, request: Request):
 @api_router.post("/sos", response_model=SosResponse)
 async def create_sos(payload: SosCreate, request: Request):
     did = device_id(request)
+    # Generous for real emergencies; if hit, the app falls back to the phone's own SMS app
+    rate_limit(request, "sos", per_device=(6, 600), per_ip=(30, 600))
     sos_id = str(uuid.uuid4())
     has_fix = payload.lat is not None and payload.lng is not None
     maps_link = f"https://www.google.com/maps?q={payload.lat},{payload.lng}" if has_fix else None
@@ -931,7 +1020,8 @@ async def safe_routes(from_lat: float, from_lng: float, to_lat: float, to_lng: f
             r.raise_for_status()
             data = r.json()
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Routing service unavailable: {e}")
+        logger.warning(f"Routing failed: {e}")
+        raise HTTPException(status_code=502, detail="Routing service is unavailable right now")
     routes = data.get('routes') or []
     if not routes:
         raise HTTPException(status_code=404, detail="No walking route found")
@@ -978,6 +1068,154 @@ async def safe_routes(from_lat: float, from_lng: float, to_lat: float, to_lng: f
     return {"routes": scored, "source": "OSRM / OpenStreetMap contributors"}
 
 
+# ----------------- Admin console API -----------------
+# Only Google accounts listed in ADMIN_EMAILS can use these routes. The console only
+# ever receives counts and totals, never users' names, phone numbers, contacts or locations.
+try:
+    from google.oauth2 import id_token as g_id_token
+    from google.auth.transport import requests as g_requests
+    _g_request = g_requests.Request()
+    HAS_GOOGLE_AUTH = True
+except ImportError:  # dependency missing: admin routes report "not configured"
+    HAS_GOOGLE_AUTH = False
+
+ADMIN_GOOGLE_CLIENT_ID = os.environ.get('ADMIN_GOOGLE_CLIENT_ID', '').strip()
+ADMIN_EMAILS = {e.strip().lower() for e in os.environ.get('ADMIN_EMAILS', '').split(',') if e.strip()}
+ADMIN_SECTIONS = ["users", "payments"]
+
+
+def admin_configured() -> bool:
+    return HAS_GOOGLE_AUTH and bool(ADMIN_GOOGLE_CLIENT_ID) and bool(ADMIN_EMAILS)
+
+
+async def require_admin(request: Request) -> dict:
+    if not admin_configured():
+        raise HTTPException(status_code=503, detail="Admin console is not set up on the server yet")
+    auth = request.headers.get('authorization') or ''
+    token = auth[7:].strip() if auth.lower().startswith('bearer ') else ''
+    if not token:
+        raise HTTPException(status_code=401, detail="Please sign in")
+    try:
+        info = await asyncio.to_thread(g_id_token.verify_oauth2_token, token, _g_request, ADMIN_GOOGLE_CLIENT_ID)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Your sign-in has expired. Please sign in again.")
+    email = (info.get('email') or '').lower()
+    if not info.get('email_verified') or email not in ADMIN_EMAILS:
+        logger.warning("Admin access refused for a non-allowlisted account")
+        raise HTTPException(status_code=403, detail="This Google account is not allowed to use the admin console")
+    return {"email": email, "name": info.get('name'), "sections": ADMIN_SECTIONS}
+
+
+@api_router.get("/admin/config")
+async def admin_config():
+    # Public: the Google client ID is not a secret, it only identifies the sign-in button
+    return {"configured": admin_configured(), "google_client_id": ADMIN_GOOGLE_CLIENT_ID or None}
+
+
+@api_router.get("/admin/me")
+async def admin_me(request: Request):
+    return await require_admin(request)
+
+
+def _daily_series(rows: List[dict], days: int, now: datetime, value_key: str = "count") -> List[dict]:
+    by_day = {r["_id"]: r.get(value_key, 0) for r in rows}
+    out = []
+    for i in range(days - 1, -1, -1):
+        d = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+        out.append({"date": d, "value": by_day.get(d, 0)})
+    return out
+
+
+@api_router.get("/admin/users-summary")
+async def admin_users_summary(request: Request):
+    await require_admin(request)
+    now = datetime.now(timezone.utc)
+    since = lambda d: now - timedelta(days=d)  # noqa: E731
+    p = db.profiles
+    registered, active_1d, active_7d, active_30d, new_7d, new_30d, untracked = await asyncio.gather(
+        p.count_documents({}),
+        p.count_documents({"last_seen": {"$gte": since(1)}}),
+        p.count_documents({"last_seen": {"$gte": since(7)}}),
+        p.count_documents({"last_seen": {"$gte": since(30)}}),
+        p.count_documents({"created_at": {"$gte": since(7)}}),
+        p.count_documents({"created_at": {"$gte": since(30)}}),
+        p.count_documents({"created_at": {"$exists": False}}),
+    )
+    rows = await p.aggregate([
+        {"$match": {"created_at": {"$gte": since(30)}}},
+        {"$group": {"_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}}, "count": {"$sum": 1}}},
+    ]).to_list(40)
+    with_contacts = len(await db.contacts.distinct("device_id"))
+    return {
+        "registered": registered,
+        "active": {"day": active_1d, "week": active_7d, "month": active_30d},
+        "new": {"week": new_7d, "month": new_30d},
+        "registered_before_tracking": untracked,
+        "with_trusted_contacts": with_contacts,
+        "signups_daily": _daily_series(rows, 30, now),
+        "generated_at": now.isoformat(),
+    }
+
+
+# Subscriptions and payments are written by the Google Play billing code (Phase 4).
+# Amounts are stored in paise (integers) so totals never suffer rounding errors.
+ACTIVE_SUB_STATES = ["active", "grace_period"]
+
+
+@api_router.get("/admin/payments-summary")
+async def admin_payments_summary(request: Request):
+    await require_admin(request)
+    now = datetime.now(timezone.utc)
+    month_ago = now - timedelta(days=30)
+    s, pay = db.subscriptions, db.payments
+    active, cancelling, on_hold, expired, refunded_subs, total_subs = await asyncio.gather(
+        s.count_documents({"status": {"$in": ACTIVE_SUB_STATES}}),
+        s.count_documents({"status": "cancelled", "expiry_time": {"$gt": now}}),
+        s.count_documents({"status": "on_hold"}),
+        s.count_documents({"status": "expired"}),
+        s.count_documents({"status": "refunded"}),
+        s.count_documents({}),
+    )
+
+    async def totals(match: dict) -> Dict[str, Dict[str, int]]:
+        rows = await pay.aggregate([
+            {"$match": match},
+            {"$group": {"_id": "$kind", "count": {"$sum": 1}, "paise": {"$sum": "$amount_paise"}}},
+        ]).to_list(10)
+        return {r["_id"]: {"count": r["count"], "paise": r["paise"]} for r in rows}
+
+    all_time, last_30 = await asyncio.gather(totals({}), totals({"at": {"$gte": month_ago}}))
+
+    def summarise(t: Dict[str, Dict[str, int]]) -> dict:
+        get = lambda k, f: t.get(k, {}).get(f, 0)  # noqa: E731
+        gross = get("new", "paise") + get("renewal", "paise")
+        refunded = get("refund", "paise")
+        return {
+            "new_payments": get("new", "count"),
+            "renewals": get("renewal", "count"),
+            "refunds": get("refund", "count"),
+            "gross_inr": gross / 100,
+            "refunded_inr": refunded / 100,
+            "net_inr": (gross - refunded) / 100,
+        }
+
+    rows = await pay.aggregate([
+        {"$match": {"at": {"$gte": month_ago}, "kind": {"$in": ["new", "renewal"]}}},
+        {"$group": {"_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$at"}}, "count": {"$sum": 1}}},
+    ]).to_list(40)
+    return {
+        "billing_live": total_subs > 0,
+        "subscriptions": {
+            "active": active, "cancelling": cancelling, "on_hold": on_hold,
+            "expired": expired, "refunded": refunded_subs, "total": total_subs,
+        },
+        "all_time": summarise(all_time),
+        "last_30_days": summarise(last_30),
+        "payments_daily": _daily_series(rows, 30, now),
+        "generated_at": now.isoformat(),
+    }
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -993,9 +1231,35 @@ app.add_middleware(
 async def require_database(request: Request, call_next):
     if DB_ERROR and request.url.path.startswith("/api/") and request.url.path not in ("/api/", "/api/config"):
         from fastapi.responses import JSONResponse
-        return JSONResponse(status_code=503, content={"detail": f"Database unavailable: {DB_ERROR}"},
+        return JSONResponse(status_code=503, content={"detail": "Service temporarily unavailable. In an emergency, call 112."},
                             headers={"Access-Control-Allow-Origin": "*"})
     return await call_next(request)
+
+
+# Active-user tracking: marks a registered profile as seen at most once every 5 minutes,
+# so busy phones don't cause a database write on every request.
+_seen_at: Dict[str, float] = {}
+SEEN_EVERY_S = 300
+
+
+@app.middleware("http")
+async def track_activity(request: Request, call_next):
+    response = await call_next(request)
+    try:
+        did = (request.headers.get('x-device-id') or '').strip()
+        path = request.url.path
+        if (did and len(did) <= 128 and db is not None and DB_ERROR is None
+                and path.startswith("/api/") and not path.startswith("/api/admin")
+                and response.status_code < 500):
+            now = time.time()
+            if now - _seen_at.get(did, 0) > SEEN_EVERY_S:
+                if len(_seen_at) > 50000:
+                    _seen_at.clear()
+                _seen_at[did] = now
+                await db.profiles.update_one({"device_id": did}, {"$set": {"last_seen": datetime.now(timezone.utc)}})
+    except Exception as e:  # tracking must never break a real request
+        logger.warning(f"Activity tracking skipped: {e}")
+    return response
 
 
 @app.on_event("startup")
@@ -1015,6 +1279,10 @@ async def ensure_indexes():
         await db.contacts.create_index("device_id")
         await db.reports.create_index([("created_at", -1)])
         await db.reports.create_index([("lat", 1), ("lng", 1)])
+        await db.profiles.create_index("last_seen")
+        await db.profiles.create_index("created_at")
+        await db.subscriptions.create_index("status")
+        await db.payments.create_index([("at", -1)])
     except Exception as e:
         logger.warning(f"Index setup skipped: {e}")
 

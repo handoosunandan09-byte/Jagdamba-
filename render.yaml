@@ -3,9 +3,13 @@ services:
     name: jagdamba-backend
     runtime: python
     rootDir: backend
+    # This service is Blueprint-managed, so this line decides the plan.
+    # Free for now (sleeps when idle). To upgrade: add a card in Render Billing, then change
+    # this to "starter" (0.5 CPU / 512 MB, US$7/month, never sleeps) and merge into main.
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT --proxy-headers --timeout-keep-alive 30
+    healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -31,4 +35,9 @@ services:
         value: "+91"
       # Identify the app to OpenStreetMap services (put your email in it)
       - key: OSM_USER_AGENT
+        sync: false
+      # Admin console: Google sign-in client ID, and the Google email(s) allowed in
+      - key: ADMIN_GOOGLE_CLIENT_ID
+        sync: false
+      - key: ADMIN_EMAILS
         sync: false
