@@ -1,13 +1,32 @@
 [build]
   base = "frontend"
-  command = "npm install --legacy-peer-deps && npm run build"
+  # Builds the app, then adds the private admin dashboard at /admin (website only, never the phone app)
+  command = "npm install --legacy-peer-deps && npm run build && rm -rf build/admin && cp -r ../admin build/admin"
   publish = "build"
 
 [build.environment]
   NODE_VERSION = "22"
   CI = "false"
 
-# Send every route to the React app (fixes 404 on refresh)
+# Admin dashboard: private, never indexed, can't be embedded in other sites
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://jagdamba-backend-tzez.onrender.com https://accounts.google.com/gsi/; img-src 'self' data: https://*.googleusercontent.com; base-uri 'self'; form-action 'none'; frame-ancestors 'none'"
+    Cache-Control = "no-cache"
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin/"
+  status = 301
+
+# Send every other route to the React app (fixes 404 on refresh)
 [[redirects]]
   from = "/*"
   to = "/index.html"

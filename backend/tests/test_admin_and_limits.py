@@ -164,3 +164,37 @@ def test_health(api, monkeypatch):
     monkeypatch.setattr(server, "client", FakeClient())
     monkeypatch.setattr(server, "_health", {"at": 0.0, "ok": False})
     assert api.get("/api/health").json() == {"ok": True}
+
+
+def test_region_recorded_from_area_lookup_and_counted(api, monkeypatch):
+    import anyio
+
+    async def fake_reverse(lat, lng):
+        return {"state": "Karnataka", "city": "Bengaluru", "label": "Whitefield, Bengaluru"}
+
+    monkeypatch.setattr(server, "reverse_geocode", fake_reverse)
+    monkeypatch.setattr(server, "_region_at", {})
+    h = {"X-Device-Id": "dev-r1"}
+    api.put("/api/profile", json={"name": "Asha"}, headers=h)
+    assert api.get("/api/geo/reverse?lat=12.97&lng=77.75", headers=h).status_code == 200
+    doc = anyio.run(lambda: server.db.profiles.find_one({"device_id": "dev-r1"}))
+    assert doc["region"] == {"state": "Karnataka", "city": "Bengaluru"}
+    assert "lat" not in str(doc["region"])  # coordinates are never stored
+    # Region is internal: not returned to the phone
+    assert "region" not in api.get("/api/profile", headers=h).json()
+    # A phone without a profile is not tracked
+    api.get("/api/geo/reverse?lat=1&lng=1", headers={"X-Device-Id": "no-profile"})
+    assert anyio.run(lambda: server.db.profiles.find_one({"device_id": "no-profile"})) is None
+
+    now = datetime.now(timezone.utc)
+    anyio.run(lambda: server.db.profiles.insert_many([
+        {"device_id": "m1", "region": {"state": "Maharashtra", "city": "Mumbai"}, "last_seen": now},
+        {"device_id": "m2", "region": {"state": "Maharashtra", "city": "Pune"}, "last_seen": now - timedelta(days=60)},
+        {"device_id": "m3", "region": {"state": "Maharashtra", "city": "Mumbai"}, "last_seen": now},
+        {"device_id": "x1"},
+    ]))
+    r = api.get("/api/admin/users-summary", headers=auth("good")).json()["regions"]
+    assert r["by_state"][0] == {"state": "Maharashtra", "users": 3, "active_30d": 2}
+    assert {"state": "Karnataka", "users": 1, "active_30d": 1} in r["by_state"]
+    assert r["by_city"][0] == {"city": "Mumbai", "state": "Maharashtra", "users": 2, "active_30d": 2}
+    assert r["unknown"] == 1

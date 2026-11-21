@@ -1,8 +1,10 @@
 # Jagdamba admin console: setup guide
 
-The admin console is a private website only you can open. It has two sections:
+The admin console lives inside your main website at **https://jgdmba.netlify.app/admin**. Only Google accounts
+listed in `ADMIN_EMAILS` can open it, and it is never included in the phone app. It has two sections:
 
-- **Users:** registered users, users active today, this week and this month, new sign-ups, and a 30-day chart.
+- **Users:** registered users, users active today, this week and this month, new sign-ups, a 30-day chart,
+  and **users by state and city** (only state and city are stored, never exact locations).
 - **Payments:** active subscriptions, payments, renewals, cancellations, refunds and revenue.
   This section shows zeros until Google Play billing launches (Phase 4).
 
@@ -30,18 +32,11 @@ When you're ready to upgrade:
 3. Confirm. This can take a few minutes, so do it at a quiet time.
    Afterwards, check that the app still opens. If MongoDB shows a new connection string, update `MONGO_URL` in Render.
 
-## Part C. Put the admin website online (free)
+## Part C. Admin website
 
-1. Go to https://app.netlify.com → **Add new site** → **Import an existing project** → **GitHub**.
-2. Choose the **Jagdamba-** repository.
-3. Settings:
-   - **Branch to deploy:** `main`
-   - **Base directory:** `admin`
-   - **Build command:** leave empty
-   - **Publish directory:** `admin`
-4. Click **Deploy**. When it finishes, Netlify shows the site's address, for example
-   `https://random-name-123.netlify.app`. Rename it under **Site configuration → Change site name**,
-   for example to `jagdamba-admin`. **Write the final address down.**
+Nothing to set up: the website build adds the dashboard at `/admin` automatically.
+If you created a separate Netlify project called `jagdamba-admin` earlier, it isn't needed; you can delete it
+(Netlify → that project → Project configuration → Danger zone → Delete project).
 
 ## Part D. Create the Google sign-in (free)
 
@@ -55,8 +50,7 @@ When you're ready to upgrade:
    (The app stays in "Testing" mode, which is what we want, because only listed test users can sign in at all.)
 5. Go to **Clients** → **Create client**:
    - Application type: **Web application**, name: `Admin console`
-   - **Authorized JavaScript origins:** add your Netlify address from Part C, e.g. `https://jagdamba-admin.netlify.app`
-     (no slash at the end)
+   - **Authorized JavaScript origins:** add `https://jgdmba.netlify.app` (no slash at the end)
    - Click **Create**.
 6. Copy the **Client ID**. It looks like `123456789-abc...apps.googleusercontent.com`. This ID is not a secret.
 
@@ -69,17 +63,17 @@ When you're ready to upgrade:
    | `ADMIN_GOOGLE_CLIENT_ID` | the Client ID from Part D |
    | `ADMIN_EMAILS` | your Google email, e.g. `you@gmail.com` (several emails can be separated by commas) |
 
-2. If a variable called `CORS_ORIGINS` already exists, add your admin address to it after a comma.
+2. If a variable called `CORS_ORIGINS` already exists, make sure `https://jgdmba.netlify.app` is in it.
    If it doesn't exist, don't create it.
 3. Click **Save changes**. Render restarts the server.
 
 ## Open it
 
-Go to your admin address and click **Sign in with Google**.
+Go to **https://jgdmba.netlify.app/admin** and click **Sign in with Google**.
 
 | Message | What it means |
 |---|---|
 | "The admin console isn't switched on yet" | Part E is missing or the server hasn't restarted yet |
 | "This Google account is not allowed" | The email you signed in with isn't in `ADMIN_EMAILS` |
-| Google says "Access blocked" or "origin not allowed" | The Netlify address in Part D step 5 doesn't exactly match |
+| Google says "Access blocked" or "origin not allowed" | Part D step 5 must say exactly `https://jgdmba.netlify.app` |
 | "Waking up the server…" | The server is still on the free plan (Part A) |

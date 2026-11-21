@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <base href="/admin/" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="theme-color" content="#02050F" />
@@ -73,6 +74,13 @@
           <h2>New registrations per day <span class="muted">(last 30 days)</span></h2>
           <div class="chart" id="chart-users"></div>
           <details><summary>Show as table</summary><div id="table-users"></div></details>
+        </div>
+        <div class="card chart-card region-card">
+          <h2>Users by state <span class="muted">(registered users)</span></h2>
+          <div class="hbars" id="region-states"></div>
+          <p class="note" id="region-note"></p>
+          <h2 class="sub-h">Top cities</h2>
+          <div id="region-cities"></div>
         </div>
         <p class="note" id="u-note"></p>
       </div>

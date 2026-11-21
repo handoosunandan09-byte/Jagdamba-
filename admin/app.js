@@ -181,6 +181,81 @@
     $("u-note").textContent = notes.join(" ");
     drawBars($("chart-users"), u.signups_daily, { unit: "registrations", unitOne: "registration" });
     drawTable($("table-users"), u.signups_daily, "Registrations");
+    renderRegions(u.regions || { by_state: [], by_city: [], unknown: 0 });
+  }
+
+  // ---------- users by region: one series, bars labelled directly (state name + count) ----------
+  function renderRegions(r) {
+    const box = $("region-states");
+    box.replaceChildren();
+    const states = r.by_state || [];
+    if (!states.length) {
+      const p = document.createElement("p");
+      p.className = "empty-text";
+      p.textContent = "No locations yet. A user's state and city appear here after they open the app with location switched on.";
+      box.style.display = "block";
+      box.append(p);
+    } else {
+      box.style.display = "";
+      const max = Math.max(...states.map((s) => s.users));
+      states.slice(0, 15).forEach((s) => {
+        const label = document.createElement("div");
+        label.className = "hbar-label";
+        label.textContent = s.state;
+        label.title = s.state;
+        const track = document.createElement("div");
+        track.className = "hbar-track hbar-row";
+        const fill = document.createElement("div");
+        fill.className = "hbar-fill";
+        fill.style.width = `${(s.users / max) * 100}%`;
+        track.append(fill);
+        track.title = `${s.state}: ${num.format(s.users)} users, ${num.format(s.active_30d)} active in the last 30 days`;
+        const value = document.createElement("div");
+        value.className = "hbar-value";
+        const muted = document.createElement("span");
+        muted.className = "muted";
+        muted.textContent = ` · ${num.format(s.active_30d)} active`;
+        value.append(num.format(s.users), muted);
+        box.append(label, track, value);
+      });
+    }
+    const extra = states.length > 15 ? ` ${states.length - 15} more states are in the table below.` : "";
+    $("region-note").textContent =
+      `${num.format(r.unknown || 0)} users haven't shared a location yet. "Active" means opened the app in the last 30 days. Only state and city are stored, never exact locations.${extra}`;
+
+    // Cities table (and any states beyond the top 15)
+    const table = document.createElement("table");
+    table.style.maxWidth = "560px";
+    const head = table.createTHead().insertRow();
+    [["City", ""], ["State", ""], ["Users", "num"], ["Active 30d", "num"]].forEach(([t, c]) => {
+      const th = document.createElement("th"); th.textContent = t; th.className = c; head.append(th);
+    });
+    const body = table.createTBody();
+    (r.by_city || []).forEach((c) => {
+      const row = body.insertRow();
+      row.insertCell().textContent = c.city || "–";
+      row.insertCell().textContent = c.state || "–";
+      const u = row.insertCell(); u.textContent = num.format(c.users); u.className = "num";
+      const a = row.insertCell(); a.textContent = num.format(c.active_30d); a.className = "num";
+    });
+    if (!(r.by_city || []).length) {
+      const row = body.insertRow(); const cell = row.insertCell(); cell.colSpan = 4; cell.textContent = "No cities yet.";
+    }
+    const wrap = [table];
+    if (states.length > 15) {
+      const t2 = document.createElement("table");
+      t2.style.marginTop = "16px";
+      const h2 = t2.createTHead().insertRow();
+      ["More states", "Users"].forEach((t, i) => { const th = document.createElement("th"); th.textContent = t; if (i) th.className = "num"; h2.append(th); });
+      const b2 = t2.createTBody();
+      states.slice(15).forEach((s) => {
+        const row = b2.insertRow();
+        row.insertCell().textContent = s.state;
+        const c = row.insertCell(); c.textContent = num.format(s.users); c.className = "num";
+      });
+      wrap.push(t2);
+    }
+    $("region-cities").replaceChildren(...wrap);
   }
 
   function renderPayments(p) {
@@ -208,8 +283,9 @@
   const dayLabel = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
   const niceMax = (v) => {
     if (v <= 4) return 4;
-    const pow = 10 ** Math.floor(Math.log10(v));
-    const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s * 4 >= v);
+    const rough = v / 4; // four gridline steps
+    const pow = 10 ** Math.floor(Math.log10(rough));
+    const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= rough);
     return step * 4;
   };
 
