@@ -626,7 +626,7 @@ def _initials(name: str) -> str:
 
 async def get_profile_doc(did: str) -> Optional[dict]:
     # Internal fields stay on the server
-    return await db.profiles.find_one({"device_id": did}, {"_id": 0, "last_seen": 0, "created_at": 0})
+    return await db.profiles.find_one({"device_id": did}, {"_id": 0, "last_seen": 0, "created_at": 0, "region": 0, "region_at": 0})
 
 
 # ----------------- Routes: core -----------------
@@ -702,12 +702,40 @@ async def put_profile(payload: ProfileIn, request: Request):
 
 # ----------------- Routes: location / places -----------------
 @api_router.get("/geo/reverse")
-async def geo_reverse(lat: float, lng: float):
+async def geo_reverse(lat: float, lng: float, request: Request):
     try:
-        return await reverse_geocode(lat, lng)
+        place = await reverse_geocode(lat, lng)
     except Exception as e:
         logger.warning(f"Geocoding failed: {e}")
         raise HTTPException(status_code=502, detail="Location names are unavailable right now")
+    await note_region(request, place)
+    return place
+
+
+# Region for the admin console's "users by region" view. Only the state and city
+# are kept (never coordinates), refreshed at most every 6 hours per phone.
+_region_at: Dict[str, float] = {}
+REGION_EVERY_S = 6 * 3600
+
+
+async def note_region(request: Request, place: dict):
+    try:
+        did = (request.headers.get('x-device-id') or '').strip()
+        state, city = place.get('state'), place.get('city')
+        if not did or len(did) > 128 or db is None or not (state or city):
+            return
+        now = time.time()
+        if now - _region_at.get(did, 0) < REGION_EVERY_S:
+            return
+        if len(_region_at) > 50000:
+            _region_at.clear()
+        _region_at[did] = now
+        await db.profiles.update_one(
+            {"device_id": did},
+            {"$set": {"region": {"state": state, "city": city}, "region_at": datetime.now(timezone.utc)}},
+        )
+    except Exception as e:  # never break the app over a statistic
+        logger.warning(f"Region update skipped: {e}")
 
 
 @api_router.get("/nearby")
@@ -1146,6 +1174,23 @@ async def admin_users_summary(request: Request):
         {"$group": {"_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}}, "count": {"$sum": 1}}},
     ]).to_list(40)
     with_contacts = len(await db.contacts.distinct("device_id"))
+
+    # Plain UTC date: MongoDB treats it as UTC, and the test database can compare it too
+    month_ago = since(30).replace(tzinfo=None)
+    active_expr = {"$cond": [{"$gte": [{"$ifNull": ["$last_seen", None]}, month_ago]}, 1, 0]}
+    by_state_rows = await p.aggregate([
+        {"$match": {"region.state": {"$nin": [None, ""]}}},
+        {"$group": {"_id": "$region.state", "users": {"$sum": 1}, "active": {"$sum": active_expr}}},
+        {"$sort": {"users": -1, "_id": 1}},
+    ]).to_list(100)
+    by_city_rows = await p.aggregate([
+        {"$match": {"region.city": {"$nin": [None, ""]}}},
+        {"$group": {"_id": {"city": "$region.city", "state": "$region.state"},
+                    "users": {"$sum": 1}, "active": {"$sum": active_expr}}},
+        {"$sort": {"users": -1}},
+        {"$limit": 25},
+    ]).to_list(25)
+    region_unknown = await p.count_documents({"$or": [{"region": {"$exists": False}}, {"region.state": None}]})
     return {
         "registered": registered,
         "active": {"day": active_1d, "week": active_7d, "month": active_30d},
@@ -1153,6 +1198,12 @@ async def admin_users_summary(request: Request):
         "registered_before_tracking": untracked,
         "with_trusted_contacts": with_contacts,
         "signups_daily": _daily_series(rows, 30, now),
+        "regions": {
+            "by_state": [{"state": r["_id"], "users": r["users"], "active_30d": r["active"]} for r in by_state_rows],
+            "by_city": [{"city": r["_id"].get("city"), "state": r["_id"].get("state"),
+                         "users": r["users"], "active_30d": r["active"]} for r in by_city_rows],
+            "unknown": region_unknown,
+        },
         "generated_at": now.isoformat(),
     }
 
@@ -1281,6 +1332,7 @@ async def ensure_indexes():
         await db.reports.create_index([("lat", 1), ("lng", 1)])
         await db.profiles.create_index("last_seen")
         await db.profiles.create_index("created_at")
+        await db.profiles.create_index("region.state")
         await db.subscriptions.create_index("status")
         await db.payments.create_index([("at", -1)])
     except Exception as e:
